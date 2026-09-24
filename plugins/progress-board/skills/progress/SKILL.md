@@ -1,7 +1,7 @@
 ---
 name: progress
 description: Keep and show a live progress board for a project — a percentage per task, checkboxes for the steps, and an HTML dashboard that hot-reloads. Use when the user asks where a project stands, what is done, what is left, for a status or progress report, or to set up / install / update a progress board. Also use after finishing a unit of work in a repo that has a board, to tick the box.
-version: 0.5.1
+version: 0.6.0
 license: MIT
 ---
 
@@ -83,12 +83,69 @@ Optional paragraph shown under the task.
 - `@YYYY-MM-DD` at the end of a step is the day it finished.
 - Any other trailing `@name` says **who is on it** — an agent, a worktree, a
   person. Several are allowed: `- [>] Stand up a server @agent-a4fc77b5 @marlex`.
+- A trailing `~S`, `~M`, `~L`, `~XL` or `~<number>` is the step's **size**:
+  1, 3, 9, 27, or the number given. An unsized step counts 1.
 - `[>]` is the live marker. Its task reports `running`, it shows in the
   dashboard's "Running now" banner, and its card is highlighted — which is the
   whole point, since every other card also says "in progress".
 - Only leaf steps count. A parent with children completes when they all do.
 - Task % = weighted steps / countable steps. Overall % = the same sum across
   every task, so a big task moves the number more than a small one.
+
+## Size — when the percentage is a lie
+
+By default every step counts the same, so a percentage is partly an artefact
+of how finely the work was chopped. "Start the Windows OV certificate" — weeks,
+and blocking — weighs exactly as much as deleting a stale line. Size fixes
+that:
+
+```markdown
+- [ ] Start the Windows OV certificate ~XL
+- [ ] Signing in CI ~L
+- [ ] Delete a stale gate ~S
+```
+
+`~S` `~M` `~L` `~XL` are 1, 3, 9, 27 — powers of three, so a large item
+genuinely dominates a small one. `~12` sets a weight directly. An unsized step
+is 1, so **a board that never mentions size behaves exactly as it did before**.
+
+The difference is not cosmetic. A release board with those four steps reads
+29% by step count and 10% by weight; the second is the one that matches how
+much is actually left.
+
+Rules:
+
+- **Size the outliers, not everything.** Most steps are ordinary and can stay
+  unsized. Reach for `~XL` and `~L` on the things that will really take weeks,
+  and `~S` on the trivia, and leave the middle alone.
+- **Size means effort, not importance.** A one-line change that unblocks the
+  release is still `~S`. Importance belongs in the ordering and in what you
+  say about it, not in the weight.
+- **Within one task, size all or none.** If half a task's steps are sized, the
+  rest silently count as `~S`, which usually is not what was meant.
+- The dashboard says "weighted by size" whenever any step declares one, so the
+  number is not mistaken for a count.
+
+## Work in progress — how many things are open at once
+
+Everything being 60% done and nothing shipping is the ordinary failure of a
+board with no limit. The dashboard shows how many tasks are open at once and
+flags it when a limit is set and exceeded:
+
+```markdown
+# Project — Progress
+
+wip: 3
+```
+
+`wip:` is board-level metadata, placed before the first task, like `status:`
+and `owner:` are on a task. Without it the count still shows; nothing is
+flagged.
+
+**When the user asks to start new work while the board is over its limit, say
+so in one line before starting** — name what is already open and offer to
+finish something first. Do not refuse, and do not lecture: it is their call,
+and the board's job is to make the cost visible, not to police it.
 
 ## Who is working on what
 

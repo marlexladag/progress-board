@@ -155,6 +155,27 @@ baseline, and later ones are kept rather than replacing it, so a fresh
 baseline cannot quietly reset the story. `baseline.json` is committed — it is
 recorded state, not a build artefact.
 
+### Size, and work in progress
+
+By default every step counts the same, so the percentage is partly an artefact
+of how finely the work was chopped. A trailing size fixes that — `~S` `~M`
+`~L` `~XL` are 1, 3, 9, 27, and `~12` sets a weight directly:
+
+```markdown
+- [ ] Start the Windows OV certificate ~XL
+- [ ] Delete a stale gate ~S
+```
+
+A release board with four such steps reads **29% by step count and 10% by
+weight**; the second is the one that matches how much is left. An unsized step
+counts 1, so a board that never mentions size behaves exactly as before, and
+the dashboard says "weighted by size" only when some step declares one.
+
+Board-level `wip: 3` sets a limit on how many tasks may be open at once. The
+dashboard always shows the count and flags it when the limit is exceeded —
+everything being 60% done and nothing shipping is the failure it exists to
+make visible.
+
 ### How the numbers work
 
 Task percentage is weighted steps over countable steps: `[x]` counts 1, `[>]`

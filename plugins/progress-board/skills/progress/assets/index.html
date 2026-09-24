@@ -263,6 +263,21 @@
     border-radius: 99px; padding: 1px 7px; white-space: nowrap;
   }
   .task-agents { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+  .size {
+    font-size: 10.5px; font-weight: 650; letter-spacing: .03em;
+    color: var(--faint); border: 1px solid var(--line);
+    border-radius: 5px; padding: 0 5px; white-space: nowrap;
+  }
+  .wip { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: var(--dim); }
+  .wip b {
+    font-weight: 600; font-variant-numeric: tabular-nums;
+    border-radius: 6px; padding: 1px 7px; border: 1px solid var(--line);
+    background: var(--track); color: var(--dim);
+  }
+  .wip.over b {
+    color: var(--doing); border-color: color-mix(in srgb, var(--doing) 38%, transparent);
+    background: color-mix(in srgb, var(--doing) 10%, transparent);
+  }
   .rb-who { margin-left: 2px; }
 
   .when { color: var(--faint); font-size: 12px; font-variant-numeric: tabular-nums; }
@@ -326,6 +341,9 @@
       .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
   }
 
+  var SIZE_NAMES = { 1: 'S', 3: 'M', 9: 'L', 27: 'XL' }
+  function sizeLabel(n) { return SIZE_NAMES[n] || ('\u00d7' + n) }
+
   var CHECK = '<svg viewBox="0 0 12 12" width="9" height="9" aria-hidden="true">' +
     '<path d="M1.6 6.3 4.5 9 10.4 2.7" fill="none" stroke="currentColor" ' +
     'stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg>'
@@ -350,6 +368,7 @@
         for (var w = 0; w < who.length; w++) meta += '<b>' + esc(who[w]) + '</b>'
         meta += '</span>'
       }
+      if (it.size) meta += '<span class="size">' + esc(sizeLabel(it.size)) + '</span>'
       if (it.pct !== null && it.pct !== undefined) meta += '<span class="child-pct">' + it.pct + '%</span>'
       if (it.date) meta += '<span class="when">' + esc(it.date) + '</span>'
 
@@ -390,9 +409,13 @@
     if (!d) return
     document.title = d.title + ' — ' + d.pct + '%'
 
-    var donePct = d.total ? (100 * d.totals.done) / d.total : 0
-    var runPct = d.total ? (100 * (d.totals.running || 0) * 0.5) / d.total : 0
-    var doingPct = d.total ? (100 * d.totals.doing * 0.5) / d.total : 0
+    // Weighted, so the arc shows what the percentage measures. With no sizes
+    // declared these are the plain counts.
+    var wt = d.wTotals || d.totals
+    var wAll = d.weight || d.total
+    var donePct = wAll ? (100 * wt.done) / wAll : 0
+    var runPct = wAll ? (100 * (wt.running || 0) * 0.5) / wAll : 0
+    var doingPct = wAll ? (100 * wt.doing * 0.5) / wAll : 0
     var running = d.running || []
 
     var h = '<header>'
@@ -401,7 +424,15 @@
 
     h += '<div class="overall">' + ring(donePct, runPct, doingPct) + '<div class="overall-body">'
     h += '<div class="overall-head">' + d.totals.done + ' of ' + d.total + ' steps done</div>'
-    h += '<div class="overall-meta">' + d.tasksDone + ' of ' + d.taskCount + ' tasks complete</div>'
+    h += '<div class="overall-meta">' + d.tasksDone + ' of ' + d.taskCount + ' tasks complete'
+    if (d.sized) h += ' \u00b7 weighted by size'
+    h += '</div>'
+    if (d.wip) {
+      h += '<div class="wip' + (d.wipOver ? ' over' : '') + '" style="margin-top:9px">'
+      h += '<b>' + d.wip + '</b><span>tasks open at once'
+      if (d.wipLimit) h += d.wipOver ? ' \u2014 over the limit of ' + d.wipLimit : ', limit ' + d.wipLimit
+      h += '</span></div>'
+    }
     h += '<div class="legend">'
     h += '<span><i class="dot" style="background:var(--done)"></i>' + d.totals.done + ' done</span>'
     if (running.length) h += '<span><i class="dot" style="background:var(--running)"></i>' + running.length + ' running</span>'
@@ -463,9 +494,11 @@
       var key = 'task' + i
       var open = t.status === 'running' ? true
         : openState[key] !== undefined ? openState[key] : t.status !== 'done'
-      var tDone = t.total ? (100 * t.done) / t.total : 0
-      var tRun = t.total ? (100 * (t.running || 0) * 0.5) / t.total : 0
-      var tDoing = t.total ? (100 * t.doing * 0.5) / t.total : 0
+      var tw = t.wCounts || { done: t.done, doing: t.doing, running: t.running }
+      var twAll = t.weight || t.total
+      var tDone = twAll ? (100 * tw.done) / twAll : 0
+      var tRun = twAll ? (100 * (tw.running || 0) * 0.5) / twAll : 0
+      var tDoing = twAll ? (100 * tw.doing * 0.5) / twAll : 0
 
       h += '<section class="task" data-open="' + open + '" data-key="' + key + '"'
       h += ' data-running="' + (t.status === 'running') + '">'

@@ -38,10 +38,17 @@ const MARKS = {
 // denominator entirely -- work that was cut should not drag a number down.
 const WEIGHT = { done: 1, doing: 0.5, running: 0.5, todo: 0, dropped: null }
 
+// How much a step counts for. Powers of three, so a large item genuinely
+// dominates a small one -- which is the point: without this, the Windows
+// certificate weighs the same as deleting a line, and the percentage is an
+// artefact of how finely the work was chopped. A step with no size is 1, so
+// a board that never mentions size behaves exactly as before.
+const SIZES = { S: 1, M: 3, L: 9, XL: 27 }
+
 // ---------------------------------------------------------------- parsing
 
 export function parse(md) {
-  const doc = { title: 'Progress', subtitle: '', tasks: [] }
+  const doc = { title: 'Progress', subtitle: '', meta: {}, tasks: [] }
   let task = null
   let group = null
   let stack = []      // open parents, for indented sub-items
@@ -84,16 +91,28 @@ export function parse(md) {
       // worktree, a person. Several are allowed, since parallel agents share
       // a step.
       let date = ''
+      let size = null
       const agents = []
       for (;;) {
         const at = text.match(/\s*@([A-Za-z0-9][\w.\-/]*)\s*$/)
-        if (!at) break
-        if (/^\d{4}-\d{2}-\d{2}$/.test(at[1])) date = at[1]
-        else agents.unshift(at[1])
-        text = text.slice(0, at.index).trim()
+        if (at) {
+          if (/^\d{4}-\d{2}-\d{2}$/.test(at[1])) date = at[1]
+          else agents.unshift(at[1])
+          text = text.slice(0, at.index).trim()
+          continue
+        }
+        const sz = text.match(/\s*~(XL|L|M|S|\d+)\s*$/i)
+        if (sz) {
+          const tok = sz[1].toUpperCase()
+          const n = /^\d+$/.test(tok) ? Number(tok) : SIZES[tok]
+          if (n > 0) size = n
+          text = text.slice(0, sz.index).trim()
+          continue
+        }
+        break
       }
 
-      const item = { text, state, date, agents, children: [] }
+      const item = { text, state, date, agents, size, children: [] }
       if (!group) { group = { name: '', items: [] }; task.groups.push(group) }
 
       while (stack.length && indent <= stack[stack.length - 1].indent) stack.pop()
@@ -114,7 +133,11 @@ export function parse(md) {
       else task.notes[task.notes.length - 1] += ' ' + t
       blank = false
     } else if (!doc.tasks.length) {
-      doc.subtitle += (doc.subtitle ? ' ' : '') + t
+      // `key: value` before the first task is board-level metadata, same
+      // shape as a task's own.
+      const dm = t.match(/^([A-Za-z][\w -]*):\s+(.*)$/)
+      if (dm) doc.meta[dm[1].toLowerCase().trim()] = dm[2].trim()
+      else doc.subtitle += (doc.subtitle ? ' ' : '') + t
     }
   }
 
@@ -138,13 +161,22 @@ function rollup(item) {
     return { sum, n }
   }
   item.pct = null
-  const w = WEIGHT[item.state]
-  return w === null ? { sum: 0, n: 0 } : { sum: w, n: 1 }
+  const factor = WEIGHT[item.state]
+  const weight = item.size || 1
+  return factor === null ? { sum: 0, n: 0 } : { sum: factor * weight, n: weight }
 }
 
 function countLeaves(item, acc) {
   if (item.children.length) { for (const c of item.children) countLeaves(c, acc) ; return acc }
   acc[item.state] = (acc[item.state] || 0) + 1
+  return acc
+}
+
+// The same tally in units of size, so the bars can show what the percentage
+// actually measures. With no sizes declared these equal the counts exactly.
+function weighLeaves(item, acc) {
+  if (item.children.length) { for (const c of item.children) weighLeaves(c, acc) ; return acc }
+  acc[item.state] = (acc[item.state] || 0) + (item.size || 1)
   return acc
 }
 
@@ -162,15 +194,18 @@ function statusOf(task) {
 export function measure(doc) {
   let sum = 0, n = 0
   const totals = { done: 0, doing: 0, running: 0, todo: 0, dropped: 0 }
+  const wTotals = { done: 0, doing: 0, running: 0, todo: 0, dropped: 0 }
 
   for (const task of doc.tasks) {
     let ts = 0, tn = 0
     const counts = { done: 0, doing: 0, running: 0, todo: 0, dropped: 0 }
+    const wCounts = { done: 0, doing: 0, running: 0, todo: 0, dropped: 0 }
     for (const g of task.groups) {
       for (const item of g.items) {
         const r = rollup(item)
         ts += r.sum; tn += r.n
         countLeaves(item, counts)
+        weighLeaves(item, wCounts)
       }
     }
     task.done = counts.done
@@ -192,11 +227,14 @@ export function measure(doc) {
     task.agents = [...active]
     task.todo = counts.todo
     task.dropped = counts.dropped
-    task.total = tn
-    task.pct = tn ? Math.round((100 * ts) / tn) : 0
+    task.wCounts = wCounts
+    task.weight = tn
+    task.total = counts.done + counts.doing + counts.running + counts.todo
+    task.pct = tn ? Math.round((100 * ts) / tn) : 0   // weighted by size
     task.status = statusOf(task)
     sum += ts; n += tn
     for (const k of Object.keys(totals)) totals[k] += counts[k]
+    for (const k of Object.keys(wTotals)) wTotals[k] += wCounts[k]
   }
 
   // A flat list of what is running right now, for the banner.
@@ -215,9 +253,30 @@ export function measure(doc) {
     }
   }
 
+  // Work in progress: how many tasks are open at once. Everything being 60%
+  // done and nothing shipping is the failure this number exists to show.
+  doc.wip = doc.tasks.filter((x) => x.status === 'running' || x.status === 'in progress').length
+  const limit = Number(doc.meta.wip)
+  doc.wipLimit = Number.isFinite(limit) && limit > 0 ? limit : null
+  doc.wipOver = doc.wipLimit !== null && doc.wip > doc.wipLimit
+
+  // Whether any step declared a size, so the page can say the number is
+  // weighted rather than let it be read as a count.
+  doc.sized = false
+  for (const task of doc.tasks) {
+    for (const g of task.groups) {
+      const seek = (items) => items.some((i) => i.size || seek(i.children))
+      if (seek(g.items)) { doc.sized = true; break }
+    }
+    if (doc.sized) break
+  }
+
   doc.totals = totals
+  doc.wTotals = wTotals
   doc.total = n
-  doc.pct = n ? Math.round((100 * sum) / n) : 0
+  doc.pct = n ? Math.round((100 * sum) / n) : 0   // weighted by size
+  doc.weight = n
+  doc.total = totals.done + totals.doing + totals.running + totals.todo
   doc.tasksDone = doc.tasks.filter((t) => t.status === 'done').length
   doc.taskCount = doc.tasks.length
   return doc
