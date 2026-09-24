@@ -95,7 +95,35 @@ status: blocked
 - `key: value` lines under a `##` are metadata. `status:` overrides the computed
   status — use it for something the checkboxes cannot say, like `blocked` or
   `deferred`. Let `done`, `in progress` and `not started` compute themselves.
-- `@YYYY-MM-DD` at the end of a step records when it finished.
+- `@YYYY-MM-DD` at the end of a step records when it finished. Any other
+  trailing `@name` says who is on it — an agent, a worktree, a person — and
+  several are allowed. The dashboard shows them beside the step, on the
+  collapsed task row and in the "Running now" banner, so a board with several
+  agents on it says who is where.
+
+### The baseline
+
+A percentage cannot distinguish progress from scope discovery. A board can go
+from 34% to 68% while the work remaining does not move, because closing 42
+steps and finding 42 more looks the same as closing 42 steps.
+
+```bash
+progress.mjs baseline PROGRESS.md --set "seeded from ROADMAP"   # record
+progress.mjs baseline PROGRESS.md                                # read the drift
+```
+
+```
+now            56/83 done   27 remaining   68%
+since 2026-09-24   14/41 then
+               42 closed, +42 steps net
+               remaining 27 -> 27  (0)
+```
+
+The dashboard shows the same line under the ring and flags it when the
+remaining count has not fallen. Drift is always measured against the *first*
+baseline, and later ones are kept rather than replacing it, so a fresh
+baseline cannot quietly reset the story. `baseline.json` is committed — it is
+recorded state, not a build artefact.
 
 ### How the numbers work
 
@@ -153,6 +181,7 @@ dashboard updates even though the work happened somewhere else.
 | `progress.mjs build [board]` | regenerate `progress-data.js` from the board |
 | `progress.mjs watch [board]` | rebuild on save and push to the browser; `--open`, `--port` |
 | `progress.mjs task [board] [match]` | report ONE task — the `[>]` one, or matched by name |
+| `progress.mjs baseline [board] [--set "why"]` | record a baseline, or show scope drift since one |
 | `progress.mjs where [board]` | print which board would be edited |
 | `progress.mjs serving [board]` | print the URL if a watch server is already up |
 | `progress.mjs static [board] [out]` | write one self-contained HTML file — no server, no sibling files |

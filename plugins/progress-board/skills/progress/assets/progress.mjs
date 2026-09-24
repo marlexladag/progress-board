@@ -6,6 +6,7 @@
  * No dependencies. Node 18+.
  *
  *   node progress.mjs task  [board] [match]         ONE task (default: the [>] one)
+ *   node progress.mjs baseline [board] [--set "why"] scope drift since a recorded day
  *   node progress.mjs where                          which board am I editing?
  *   node progress.mjs serving [board]               URL if a watch server is up
  *   node progress.mjs static [board] [out.html]     one self-contained file
@@ -78,12 +79,21 @@ export function parse(md) {
       const state = MARKS[box[2]] ?? 'todo'
       let text = box[3].trim()
 
-      // Trailing `@YYYY-MM-DD` is the day it was finished, not part of the text.
+      // Trailing `@token`s are metadata, not text: a date-shaped one is the day
+      // it finished, anything else names whoever is on it -- an agent, a
+      // worktree, a person. Several are allowed, since parallel agents share
+      // a step.
       let date = ''
-      const dm = text.match(/\s*@(\d{4}-\d{2}-\d{2})\s*$/)
-      if (dm) { date = dm[1]; text = text.slice(0, dm.index).trim() }
+      const agents = []
+      for (;;) {
+        const at = text.match(/\s*@([A-Za-z0-9][\w.\-/]*)\s*$/)
+        if (!at) break
+        if (/^\d{4}-\d{2}-\d{2}$/.test(at[1])) date = at[1]
+        else agents.unshift(at[1])
+        text = text.slice(0, at.index).trim()
+      }
 
-      const item = { text, state, date, children: [] }
+      const item = { text, state, date, agents, children: [] }
       if (!group) { group = { name: '', items: [] }; task.groups.push(group) }
 
       while (stack.length && indent <= stack[stack.length - 1].indent) stack.pop()
@@ -166,6 +176,20 @@ export function measure(doc) {
     task.done = counts.done
     task.doing = counts.doing
     task.running = counts.running
+
+    // Who is on this task right now. Attribution on a finished step is
+    // history; this is the answer to "is anyone working on it".
+    const active = new Set()
+    const walkAgents = (items) => {
+      for (const it of items) {
+        if ((it.state === 'running' || it.state === 'doing') && it.agents) {
+          for (const a of it.agents) active.add(a)
+        }
+        walkAgents(it.children)
+      }
+    }
+    for (const g of task.groups) walkAgents(g.items)
+    task.agents = [...active]
     task.todo = counts.todo
     task.dropped = counts.dropped
     task.total = tn
@@ -182,7 +206,7 @@ export function measure(doc) {
       const walk = (items, trail) => {
         for (const it of items) {
           if (!it.children.length && it.state === 'running') {
-            doc.running.push({ task: task.name, step: it.text, trail })
+            doc.running.push({ task: task.name, step: it.text, trail, agents: it.agents || [] })
           }
           walk(it.children, it.children.length ? [...trail, it.text] : trail)
         }
@@ -269,8 +293,9 @@ function printSteps(items, indent) {
   for (const it of items) {
     const g = GLYPH[it.state] ?? ' '
     const date = it.date ? `  @${it.date}` : ''
+    const who = it.agents && it.agents.length ? `  [${it.agents.join(', ')}]` : ''
     const pct = it.children.length && it.pct !== null ? `  (${it.pct}%)` : ''
-    console.log(`${indent}[${g}] ${it.text}${pct}${date}`)
+    console.log(`${indent}[${g}] ${it.text}${pct}${who}${date}`)
     printSteps(it.children, indent + '    ')
   }
 }
@@ -304,6 +329,9 @@ function reportTask(doc, match) {
 
   console.log(task.name)
   console.log(`  ${task.pct}%  ${task.status}  ${task.done}/${task.total} done`)
+  if (task.agents && task.agents.length) {
+    console.log(`  working: ${task.agents.join(', ')}`)
+  }
   // A declared status that `running` overrode would read as a contradiction.
   if (task.meta.status && task.status === task.meta.status.toLowerCase()) {
     console.log(`  declared: ${task.meta.status}`)
@@ -347,6 +375,83 @@ export function resolveBoard(given, cwd = process.cwd()) {
   return direct
 }
 
+// ---------------------------------------------------------------- baseline
+
+// A percentage cannot tell progress from scope discovery. A baseline can:
+// it records what the board looked like on a day, so "27 still to do" can be
+// read against "27 still to do a week ago, after closing 42 steps".
+const BASELINE = (boardPath) => join(dirname(boardPath), 'baseline.json')
+
+function readBaselines(boardPath) {
+  const f = BASELINE(boardPath)
+  if (!existsSync(f)) return []
+  try {
+    const d = JSON.parse(readFileSync(f, 'utf8'))
+    return Array.isArray(d.baselines) ? d.baselines : []
+  } catch {
+    return []
+  }
+}
+
+// Net, not gross: without identity per step we cannot tell an added step from
+// a renamed one, so the wording everywhere says "net" and means it.
+function drift(base, doc) {
+  const remainingThen = base.total - base.done
+  const remainingNow = doc.total - doc.totals.done
+  return {
+    date: base.date,
+    label: base.label || '',
+    total: base.total,
+    done: base.done,
+    addedNet: doc.total - base.total,
+    closed: doc.totals.done - base.done,
+    remainingThen,
+    remainingNow,
+    remainingDelta: remainingNow - remainingThen,
+  }
+}
+
+function setBaseline(boardPath, label) {
+  const { doc } = build(boardPath)
+  const list = readBaselines(boardPath)
+  const entry = {
+    date: new Date().toISOString().slice(0, 10),
+    total: doc.total,
+    done: doc.totals.done,
+    label: label || '',
+  }
+  list.push(entry)
+  writeFileSync(BASELINE(boardPath), JSON.stringify({ baselines: list }, null, 2) + '\n')
+  console.log(`Baseline recorded: ${entry.date}  ${entry.done}/${entry.total} done${label ? '  — ' + label : ''}`)
+  console.log(`  ${BASELINE(boardPath)}`)
+  if (list.length > 1) {
+    console.log('')
+    console.log(`  This is baseline #${list.length}. The earlier ones are kept --`)
+    console.log('  drift is always reported against the FIRST, so a new one')
+    console.log('  cannot quietly reset the comparison.')
+  }
+}
+
+function showBaseline(boardPath) {
+  const { doc } = build(boardPath)
+  const list = readBaselines(boardPath)
+  if (!list.length) {
+    console.error('No baseline recorded. Set one with:')
+    console.error(`  progress.mjs baseline ${boardPath} --set "why now"`)
+    process.exit(1)
+  }
+  console.log(`now            ${doc.totals.done}/${doc.total} done   ${doc.total - doc.totals.done} remaining   ${doc.pct}%`)
+  console.log('')
+  for (const b of list) {
+    const d = drift(b, doc)
+    const sign = d.remainingDelta > 0 ? '+' : ''
+    console.log(`since ${d.date}   ${d.done}/${d.total} then${d.label ? '  (' + d.label + ')' : ''}`)
+    console.log(`               ${d.closed} closed, ${d.addedNet >= 0 ? '+' : ''}${d.addedNet} steps net`)
+    console.log(`               remaining ${d.remainingThen} -> ${d.remainingNow}  (${sign}${d.remainingDelta})`)
+    console.log('')
+  }
+}
+
 // ---------------------------------------------------------------- emitting
 
 function build(boardPath) {
@@ -355,6 +460,10 @@ function build(boardPath) {
   doc.source = boardPath
   doc.generatedAt = new Date().toISOString()
   doc.stamp = createHash('sha1').update(md).digest('hex').slice(0, 12)
+
+  // Always against the FIRST baseline: a later one must not reset the story.
+  const bases = readBaselines(boardPath)
+  doc.drift = bases.length ? drift(bases[0], doc) : null
 
   const out = join(dirname(boardPath), 'progress-data.js')
   writeFileSync(
@@ -540,6 +649,7 @@ const mode = verb === 'watch' ? 'watch'
   : verb === 'static' ? 'static'
   : verb === 'serving' ? 'serving'
   : verb === 'task' ? 'task'
+  : verb === 'baseline' ? 'baseline'
   : 'build'
 
 if (mode === 'install') {
@@ -569,6 +679,13 @@ if (mode === 'serving') {
   }
   console.log('not serving')
   process.exit(1)
+}
+
+if (mode === 'baseline') {
+  const setIdx = argv.indexOf('--set')
+  if (setIdx !== -1) setBaseline(board, argv[setIdx + 1] && !argv[setIdx + 1].startsWith('--') ? argv[setIdx + 1] : '')
+  else showBaseline(board)
+  process.exit(0)
 }
 
 if (mode === 'task') {

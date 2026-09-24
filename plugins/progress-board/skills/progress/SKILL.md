@@ -1,7 +1,7 @@
 ---
 name: progress
 description: Keep and show a live progress board for a project — a percentage per task, checkboxes for the steps, and an HTML dashboard that hot-reloads. Use when the user asks where a project stands, what is done, what is left, for a status or progress report, or to set up / install / update a progress board. Also use after finishing a unit of work in a repo that has a board, to tick the box.
-version: 0.2.0
+version: 0.4.0
 license: MIT
 ---
 
@@ -81,12 +81,40 @@ Optional paragraph shown under the task.
   like `blocked` or `deferred`. Let `done`, `in progress` and `not started`
   compute themselves.
 - `@YYYY-MM-DD` at the end of a step is the day it finished.
+- Any other trailing `@name` says **who is on it** — an agent, a worktree, a
+  person. Several are allowed: `- [>] Stand up a server @agent-a4fc77b5 @marlex`.
 - `[>]` is the live marker. Its task reports `running`, it shows in the
   dashboard's "Running now" banner, and its card is highlighted — which is the
   whole point, since every other card also says "in progress".
 - Only leaf steps count. A parent with children completes when they all do.
 - Task % = weighted steps / countable steps. Overall % = the same sum across
   every task, so a big task moves the number more than a small one.
+
+## Who is working on what
+
+When several agents run at once — the usual case with worktrees — a task
+reading `running` does not say *who*. Tag the step:
+
+```markdown
+- [>] Introspection from pg_catalog @agent-a6aafc4b
+- [>] Stand up a real server @agent-a4fc77b5 @marlex
+```
+
+The dashboard then shows the name beside the step, on the collapsed task row,
+and in the "Running now" banner, and `progress.mjs task` prints a `working:`
+line. A task's `working:` list counts only `[>]` and `[~]` steps — a name left
+on a finished step is attribution, not someone still at it.
+
+Rules:
+
+- **Tag yourself when you pick a step up, and leave the tag on when you finish
+  it.** On a `[x]` step the name is a record of who did the work, which is
+  worth keeping. Remove it only if you abandon the step unfinished, since a
+  name on an abandoned `[ ]` step claims someone is on it.
+- **Use a stable identifier** — the worktree name (`agent-a4fc77b5`), an agent
+  id, or a person's handle. Not "me", which means nothing to the next reader.
+- Multiple names on one step is fine and is the honest rendering of two agents
+  pairing on it.
 
 ## Worktrees and subagents — resolve the board first
 
@@ -109,6 +137,48 @@ way reaches a watch server running in the main tree, so the user's open
 dashboard updates even though the work happened in a worktree.
 
 Only run `install` when `where` reports no board anywhere.
+
+## The baseline — what a percentage cannot tell you
+
+A percentage cannot distinguish progress from scope discovery. A board can go
+from 34% to 68% while the work remaining does not move at all, because closing
+42 steps and finding 42 more looks identical to closing 42 steps. That is not
+hypothetical; it is what a real board did in one day.
+
+So record a baseline when the board is first seeded, and whenever a phase
+genuinely restarts:
+
+```bash
+node docs/progress/progress.mjs baseline docs/progress/PROGRESS.md --set "seeded from ROADMAP"
+```
+
+Then read the drift rather than the percentage:
+
+```bash
+node docs/progress/progress.mjs baseline docs/progress/PROGRESS.md
+```
+
+```
+now            56/83 done   27 remaining   68%
+since 2026-09-24   14/41 then  (seeded from ROADMAP)
+               42 closed, +42 steps net
+               remaining 27 -> 27  (0)
+```
+
+`baseline.json` sits beside the board and **is committed** — it is recorded
+state, not a build artefact.
+
+Rules that keep it meaningful:
+
+- **Never re-baseline to make a number look better.** Drift is always reported
+  against the FIRST baseline for exactly this reason, and later ones are kept
+  rather than replacing it. If you set a new one, say why in its label.
+- **When the remaining count has not fallen, say so out loud.** The dashboard
+  flags it; a report that quotes 68% and omits "and 27 still remain, as a week
+  ago" is telling the flattering half.
+- Setting a baseline is the user's call at the start of a phase. Offer it once
+  when seeding a new board; do not set one unasked on a board that has none,
+  since the date you pick becomes the story.
 
 ## Keeping it current — the standing rule
 
@@ -203,7 +273,8 @@ rather than guessing which task was meant.
 
 *"Where are we?"* with nothing to narrow it — report the PROJECT: lead with
 the overall number and the one or two tasks that actually matter, not a
-recital of every step. `progress.mjs build` prints that headline
+recital of every step. If a baseline exists, quote the drift beside the
+percentage — the number alone hides whether the work left is shrinking. `progress.mjs build` prints that headline
 (`64%  18/28 done`) — cheap to run and quote. If anything is `[>]`, say what
 is running.
 
