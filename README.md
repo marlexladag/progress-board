@@ -63,6 +63,11 @@ open docs/progress/index.html
 Both hot-reload. Leave the first one on a second monitor and the bars move as
 Claude works.
 
+With several projects open, `watch` takes the next free port and says which it
+took, so two boards never collide. A port named with `--port` is never quietly
+swapped — it fails instead. A board already being watched gets no second
+server; `watch` prints the existing URL and stops.
+
 ## The board
 
 ````markdown

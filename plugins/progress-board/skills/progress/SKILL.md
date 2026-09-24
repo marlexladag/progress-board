@@ -1,7 +1,7 @@
 ---
 name: progress
 description: Keep and show a live progress board for a project — a percentage per task, checkboxes for the steps, and an HTML dashboard that hot-reloads. Use when the user asks where a project stands, what is done, what is left, for a status or progress report, or to set up / install / update a progress board. Also use after finishing a unit of work in a repo that has a board, to tick the box.
-version: 0.4.1
+version: 0.5.0
 license: MIT
 ---
 
@@ -260,6 +260,14 @@ open docs/progress/index.html
 Both hot-reload. The served one is instant over SSE; the file:// one lags up
 to two seconds and needs `build` to have run. Offer the watch command when the
 user will be watching while you work.
+
+Several projects open at once is normal and they cannot share a port, so
+`watch` takes the next free one and says which it took. A port named with
+`--port` is never quietly swapped — it fails and says the port is taken,
+because being handed a different URL than you asked for is worse than an
+error. And a board that is already being watched does not get a second
+server: `watch` prints the existing URL and stops. Quote the URL it actually
+printed, not 4321.
 
 ## Where there is no browser
 

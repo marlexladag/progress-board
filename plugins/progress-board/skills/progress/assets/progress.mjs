@@ -486,7 +486,24 @@ const MIME = {
   '.svg': 'image/svg+xml',
 }
 
-function serve(boardPath, port, openIt) {
+function openBrowser(url) {
+  const cmd = process.platform === 'darwin' ? 'open'
+    : process.platform === 'win32' ? 'start' : 'xdg-open'
+  spawn(cmd, [url], { stdio: 'ignore', detached: true, shell: process.platform === 'win32' }).unref()
+}
+
+function serve(boardPath, port, openIt, portWasExplicit) {
+  // Someone may already be watching THIS board -- a second window, or a run
+  // that was forgotten. Two servers on one board is never what was wanted.
+  const live = serving(boardPath)
+  if (live) {
+    const url = `http://localhost:${live.port}/`
+    console.log(`Already being watched by pid ${live.pid}  ->  ${url}`)
+    console.log('Nothing started. Open that, or stop it first.')
+    if (openIt) openBrowser(url)
+    process.exit(0)
+  }
+
   const root = dirname(boardPath)
   const clients = new Set()
 
@@ -518,18 +535,39 @@ function serve(boardPath, port, openIt) {
     res.end(readFileSync(file))
   })
 
-  server.listen(port, () => {
+  // Several projects open at once is normal, and they cannot share a port.
+  // A port picked by default steps aside; a port asked for by name does not,
+  // because silently using a different one would be worse than saying so.
+  let attempts = 0
+  server.on('error', (err) => {
+    if (err.code !== 'EADDRINUSE') {
+      console.error(`Could not start the server: ${err.message}`)
+      process.exit(1)
+    }
+    if (portWasExplicit) {
+      console.error(`Port ${port} is already in use.`)
+      console.error('Another project is probably watching its own board there.')
+      console.error('Leave --port off to be given a free one.')
+      process.exit(1)
+    }
+    if (++attempts > 40) {
+      console.error(`No free port between ${port - attempts} and ${port}.`)
+      process.exit(1)
+    }
+    server.listen(++port)
+  })
+
+  server.on('listening', () => {
     const { doc } = build(boardPath)
     const url = `http://localhost:${port}/`
     markServing(boardPath, port)
     console.log(`progress  ${doc.pct}%  ${doc.totals.done}/${doc.total} done  ->  ${url}`)
     console.log(`watching  ${boardPath}`)
-    if (openIt) {
-      const cmd = process.platform === 'darwin' ? 'open'
-        : process.platform === 'win32' ? 'start' : 'xdg-open'
-      spawn(cmd, [url], { stdio: 'ignore', detached: true, shell: process.platform === 'win32' }).unref()
-    }
+    if (attempts) console.log(`          (${port - attempts} was taken, so this board took ${port})`)
+    if (openIt) openBrowser(url)
   })
+
+  server.listen(port)
 
   // Watch the whole directory, so editing the VIEWER reaches an open tab too
   // -- otherwise a redesign sits on disk while the browser shows the old one.
@@ -700,7 +738,7 @@ if (mode === 'static') {
   const kb = Math.round(readFileSync(out).length / 1024)
   console.log(`${doc.pct}%  ${doc.totals.done}/${doc.total} done  ->  ${out}  (${kb} kB, self-contained)`)
 } else if (mode === 'watch') {
-  serve(board, port, flags.has('--open'))
+  serve(board, port, flags.has('--open'), Boolean(portArg))
 } else {
   const { doc, out } = build(board)
   console.log(`${doc.pct}%  ${doc.totals.done}/${doc.total} done  ->  ${out}`)
