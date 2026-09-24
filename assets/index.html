@@ -1,0 +1,458 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Progress</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --line: #e4e8ed;
+    --line-soft: #eef1f5;
+    --ink: #11151a;
+    --dim: #5f6875;
+    --faint: #98a1ad;
+    --accent: #3068f0;
+    --done: #16a05c;
+    --doing: #cf8408;
+    --todo: #ccd3db;
+    --dropped: #b4bac2;
+    --track: #e9edf2;
+    --radius: 14px;
+    --shadow: 0 1px 2px rgba(17,21,26,.04), 0 2px 8px rgba(17,21,26,.05);
+    --hover: rgba(17,21,26,.025);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0d1014; --panel: #151920; --line: #242a33; --line-soft: #1d232b;
+      --ink: #e8ecf1; --dim: #99a3b0; --faint: #6b7583; --accent: #6693ff;
+      --done: #2fbf76; --doing: #e0a02a; --todo: #363e49; --dropped: #434b56;
+      --track: #1f252d;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 2px 10px rgba(0,0,0,.22);
+      --hover: rgba(255,255,255,.03);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0d1014; --panel: #151920; --line: #242a33; --line-soft: #1d232b;
+    --ink: #e8ecf1; --dim: #99a3b0; --faint: #6b7583; --accent: #6693ff;
+    --done: #2fbf76; --doing: #e0a02a; --todo: #363e49; --dropped: #434b56;
+    --track: #1f252d;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 2px 10px rgba(0,0,0,.22);
+    --hover: rgba(255,255,255,.03);
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.6 ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  code, .mono { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+  code {
+    font-size: .88em;
+    background: var(--track);
+    padding: .1em .38em;
+    border-radius: 5px;
+    overflow-wrap: anywhere;
+  }
+  .wrap { max-width: 940px; margin: 0 auto; padding: 44px 20px 90px; }
+
+  /* ---------------- header ---------------- */
+  h1 { font-size: 27px; line-height: 1.25; margin: 0 0 7px; letter-spacing: -.021em; font-weight: 640; }
+  .subtitle { color: var(--dim); margin: 0 0 24px; max-width: 64ch; font-size: 14.5px; }
+
+  .overall {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: var(--radius); box-shadow: var(--shadow);
+    padding: 24px 26px;
+    display: flex; align-items: center; gap: 26px;
+  }
+  .ring { flex: none; position: relative; width: 104px; height: 104px; }
+  .ring svg { transform: rotate(-90deg); display: block; }
+  .ring circle { fill: none; stroke-linecap: round; }
+  .ring .track { stroke: var(--track); }
+  .ring .arc-doing { stroke: var(--doing); transition: stroke-dashoffset .5s cubic-bezier(.2,.7,.3,1); }
+  .ring .arc-done { stroke: var(--done); transition: stroke-dashoffset .5s cubic-bezier(.2,.7,.3,1); }
+  .ring-label {
+    position: absolute; inset: 0; display: grid; place-items: center;
+    font-size: 25px; font-weight: 650; letter-spacing: -.03em; font-variant-numeric: tabular-nums;
+  }
+  .overall-body { flex: 1 1 auto; min-width: 0; }
+  .overall-head { font-size: 15.5px; font-weight: 560; margin-bottom: 3px; }
+  .overall-meta { color: var(--dim); font-size: 14px; }
+  .legend { display: flex; gap: 7px 18px; flex-wrap: wrap; margin-top: 15px; font-size: 13px; color: var(--dim); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .dot { width: 8px; height: 8px; border-radius: 99px; display: inline-block; flex: none; }
+
+  /* ---------------- controls ---------------- */
+  .controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 28px 0 14px; }
+  .seg { display: flex; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 3px; gap: 2px; }
+  .seg button {
+    border: 0; background: transparent; color: var(--dim); font: inherit; font-size: 13px; font-weight: 500;
+    padding: 5px 12px; border-radius: 7px; cursor: pointer; transition: background .15s, color .15s;
+  }
+  .seg button:hover { color: var(--ink); }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+  .spacer { flex: 1 1 auto; }
+  .ghost {
+    border: 1px solid var(--line); background: var(--panel); color: var(--dim);
+    font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 9px; cursor: pointer;
+    transition: color .15s, border-color .15s;
+  }
+  .ghost:hover { color: var(--ink); border-color: var(--faint); }
+
+  /* ---------------- task card ---------------- */
+  .task {
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    box-shadow: var(--shadow); margin-bottom: 12px; overflow: hidden;
+  }
+  .task-head {
+    display: grid;
+    grid-template-columns: 14px minmax(0, 1fr) auto auto;
+    align-items: center; gap: 11px;
+    padding: 15px 20px; cursor: pointer; user-select: none;
+    transition: background .15s;
+  }
+  .task-head:hover { background: var(--hover); }
+  .chev { color: var(--faint); font-size: 10px; transition: transform .2s; line-height: 1; }
+  .task[data-open="false"] .chev { transform: rotate(-90deg); }
+  .task-name { font-weight: 570; min-width: 0; letter-spacing: -.005em; }
+  .task-count { color: var(--faint); font-size: 12.5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .task-right { display: flex; align-items: center; gap: 11px; }
+  .pill {
+    font-size: 11px; padding: 3px 9px; border-radius: 99px; font-weight: 560;
+    border: 1px solid var(--line); color: var(--dim); white-space: nowrap;
+    letter-spacing: .01em;
+  }
+  .pill.done { color: var(--done); border-color: color-mix(in srgb, var(--done) 35%, transparent); background: color-mix(in srgb, var(--done) 8%, transparent); }
+  .pill.in-progress, .pill.doing { color: var(--doing); border-color: color-mix(in srgb, var(--doing) 35%, transparent); background: color-mix(in srgb, var(--doing) 9%, transparent); }
+  .pill.blocked { color: #e05252; border-color: color-mix(in srgb, #e05252 35%, transparent); background: color-mix(in srgb, #e05252 8%, transparent); }
+  .pill.deferred { color: var(--faint); border-style: dashed; }
+  .task-pct {
+    font-variant-numeric: tabular-nums; font-weight: 560; font-size: 14px;
+    width: 42px; text-align: right; white-space: nowrap;
+  }
+  .task-bar { height: 3px; background: var(--track); display: flex; }
+  .task-bar > i { height: 100%; transition: width .45s cubic-bezier(.2,.7,.3,1); }
+  .task-bar > i.done { background: var(--done); }
+  .task-bar > i.doing { background: var(--doing); }
+
+  .task-body { padding: 2px 20px 18px; }
+  .task[data-open="false"] .task-body, .task[data-open="false"] .task-bar { display: none; }
+  .note { color: var(--dim); font-size: 14px; margin: 14px 0 2px; max-width: 70ch; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 16px; }
+  .chip {
+    font-size: 11.5px; color: var(--faint); border: 1px solid var(--line-soft);
+    background: var(--track); padding: 2px 8px; border-radius: 6px;
+  }
+  .chip b { font-weight: 550; color: var(--dim); }
+
+  .group-name {
+    font-size: 11px; text-transform: uppercase; letter-spacing: .07em;
+    color: var(--faint); font-weight: 600; margin: 20px 0 2px;
+  }
+
+  /* ---------------- items ----------------
+     Grid, not flex: the box, the text and the trailing meta each own a
+     column, so a long line wraps INSIDE its own column instead of pushing
+     the date off the card or dropping the text below the checkbox. */
+  ul.items { list-style: none; margin: 8px 0 0; padding: 0; }
+  li.item {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: start; gap: 4px 10px;
+    padding: 4px 0;
+  }
+  li.item > ul.items {
+    grid-column: 1 / -1;
+    margin: 3px 0 5px 7px;
+    padding-left: 19px;
+    border-left: 1.5px solid var(--line-soft);
+  }
+  .box {
+    width: 16px; height: 16px; border-radius: 5px; margin-top: 3px;
+    border: 1.5px solid var(--todo); display: grid; place-items: center;
+    color: #fff; flex: none; transition: background .2s, border-color .2s;
+  }
+  .box.done { background: var(--done); border-color: var(--done); }
+  .box.doing { border-color: var(--doing); background: color-mix(in srgb, var(--doing) 14%, transparent); }
+  .box.doing i { width: 7px; height: 2px; border-radius: 2px; background: var(--doing); display: block; }
+  .box.dropped { border-color: var(--dropped); border-style: dashed; }
+  .box.dropped i { width: 7px; height: 1.5px; border-radius: 2px; background: var(--dropped); display: block; }
+  .item-text { min-width: 0; overflow-wrap: break-word; }
+  li.item.done > .item-text { color: var(--dim); }
+  li.item.dropped > .item-text { color: var(--faint); text-decoration: line-through; text-decoration-color: var(--line); }
+  .item-meta {
+    display: flex; align-items: center; gap: 10px;
+    white-space: nowrap; margin-top: 2px;
+  }
+  .when { color: var(--faint); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .child-pct {
+    color: var(--dim); font-size: 11.5px; font-variant-numeric: tabular-nums;
+    background: var(--track); border-radius: 5px; padding: 1px 6px; font-weight: 550;
+  }
+
+  /* ---------------- footer ---------------- */
+  footer {
+    margin-top: 32px; color: var(--faint); font-size: 12.5px;
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  }
+  footer .sep { opacity: .5; }
+  .live { display: inline-flex; align-items: center; gap: 6px; }
+  .live .dot { background: var(--done); animation: pulse 2.4s ease-in-out infinite; }
+  .live.off .dot { background: var(--faint); animation: none; }
+  @keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: .3 } }
+
+  .empty {
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 30px; color: var(--dim); box-shadow: var(--shadow);
+  }
+  .flash { animation: flash 1s ease-out; }
+  @keyframes flash { from { background: color-mix(in srgb, var(--accent) 13%, transparent); } }
+
+  @media (max-width: 620px) {
+    .wrap { padding: 26px 16px 64px; }
+    .overall { flex-direction: column; align-items: flex-start; gap: 18px; padding: 20px; }
+    .task-head { grid-template-columns: 14px minmax(0, 1fr) auto; padding: 14px 16px; }
+    .task-count { display: none; }
+    .task-body { padding: 2px 16px 16px; }
+    .item-meta { gap: 7px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap" id="root">
+  <div class="empty">Loading the board…</div>
+</div>
+
+<script src="progress-data.js"></script>
+<script>
+(function () {
+  var root = document.getElementById('root')
+  var prevStamp = null
+  var openState = {}
+  try { openState = JSON.parse(localStorage.getItem('progress.open') || '{}') } catch (e) {}
+  var filter = 'all'
+  try { filter = localStorage.getItem('progress.filter') || 'all' } catch (e) {}
+
+  function save(k, v) { try { localStorage.setItem(k, v) } catch (e) {} }
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]
+    })
+  }
+  function rich(s) {
+    return esc(s)
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+  }
+
+  var CHECK = '<svg viewBox="0 0 12 12" width="9" height="9" aria-hidden="true">' +
+    '<path d="M1.6 6.3 4.5 9 10.4 2.7" fill="none" stroke="currentColor" ' +
+    'stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+
+  function boxFor(state) {
+    if (state === 'done') return '<span class="box done">' + CHECK + '</span>'
+    if (state === 'doing') return '<span class="box doing"><i></i></span>'
+    if (state === 'dropped') return '<span class="box dropped"><i></i></span>'
+    return '<span class="box"></span>'
+  }
+
+  function renderItems(items) {
+    if (!items.length) return ''
+    var out = '<ul class="items">'
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i]
+      var meta = ''
+      if (it.pct !== null && it.pct !== undefined) meta += '<span class="child-pct">' + it.pct + '%</span>'
+      if (it.date) meta += '<span class="when">' + esc(it.date) + '</span>'
+
+      out += '<li class="item ' + it.state + '">'
+      out += boxFor(it.state)
+      out += '<span class="item-text">' + rich(it.text) + '</span>'
+      out += '<span class="item-meta">' + meta + '</span>'
+      out += renderItems(it.children || [])
+      out += '</li>'
+    }
+    return out + '</ul>'
+  }
+
+  function visible(t) {
+    if (filter === 'all') return true
+    if (filter === 'active') return t.status !== 'done' && t.status !== 'planned'
+    if (filter === 'done') return t.status === 'done'
+    if (filter === 'todo') return t.pct === 0
+    return true
+  }
+
+  function ring(donePct, doingPct) {
+    var R = 44, C = 2 * Math.PI * R
+    var both = Math.min(100, donePct + doingPct)
+    return '<div class="ring"><svg width="104" height="104" viewBox="0 0 104 104">' +
+      '<circle class="track" cx="52" cy="52" r="' + R + '" stroke-width="9"/>' +
+      '<circle class="arc-doing" cx="52" cy="52" r="' + R + '" stroke-width="9" ' +
+        'stroke-dasharray="' + C + '" stroke-dashoffset="' + (C * (1 - both / 100)) + '"/>' +
+      '<circle class="arc-done" cx="52" cy="52" r="' + R + '" stroke-width="9" ' +
+        'stroke-dasharray="' + C + '" stroke-dashoffset="' + (C * (1 - donePct / 100)) + '"/>' +
+      '</svg><div class="ring-label">' + Math.round(donePct + doingPct) + '%</div></div>'
+  }
+
+  function render(d) {
+    if (!d) return
+    document.title = d.title + ' — ' + d.pct + '%'
+
+    var donePct = d.total ? (100 * d.totals.done) / d.total : 0
+    var doingPct = d.total ? (100 * d.totals.doing * 0.5) / d.total : 0
+
+    var h = '<header>'
+    h += '<h1>' + esc(d.title) + '</h1>'
+    if (d.subtitle) h += '<p class="subtitle">' + rich(d.subtitle) + '</p>'
+
+    h += '<div class="overall">' + ring(donePct, doingPct) + '<div class="overall-body">'
+    h += '<div class="overall-head">' + d.totals.done + ' of ' + d.total + ' steps done</div>'
+    h += '<div class="overall-meta">' + d.tasksDone + ' of ' + d.taskCount + ' tasks complete</div>'
+    h += '<div class="legend">'
+    h += '<span><i class="dot" style="background:var(--done)"></i>' + d.totals.done + ' done</span>'
+    h += '<span><i class="dot" style="background:var(--doing)"></i>' + d.totals.doing + ' in progress</span>'
+    h += '<span><i class="dot" style="background:var(--todo)"></i>' + d.totals.todo + ' to do</span>'
+    if (d.totals.dropped) h += '<span><i class="dot" style="background:var(--dropped)"></i>' + d.totals.dropped + ' dropped</span>'
+    h += '</div></div></div></header>'
+
+    h += '<div class="controls"><div class="seg" id="seg">'
+    var opts = [['all', 'All'], ['active', 'In progress'], ['todo', 'Not started'], ['done', 'Done']]
+    for (var o = 0; o < opts.length; o++) {
+      h += '<button data-f="' + opts[o][0] + '" aria-pressed="' + (filter === opts[o][0]) + '">' + opts[o][1] + '</button>'
+    }
+    h += '</div><div class="spacer"></div>'
+    h += '<button class="ghost" id="expand">Expand all</button>'
+    h += '<button class="ghost" id="collapse">Collapse all</button></div>'
+
+    var shown = 0
+    for (var i = 0; i < d.tasks.length; i++) {
+      var t = d.tasks[i]
+      if (!visible(t)) continue
+      shown++
+      var key = 'task' + i
+      var open = openState[key] !== undefined ? openState[key] : t.status !== 'done'
+      var tDone = t.total ? (100 * t.done) / t.total : 0
+      var tDoing = t.total ? (100 * t.doing * 0.5) / t.total : 0
+
+      h += '<section class="task" data-open="' + open + '" data-key="' + key + '">'
+      h += '<div class="task-head"><span class="chev">▼</span>'
+      h += '<span class="task-name">' + rich(t.name) + '</span>'
+      h += '<span class="task-count">' + t.done + '/' + t.total + '</span>'
+      h += '<span class="task-right">'
+      h += '<span class="pill ' + t.status.replace(/\s+/g, '-') + '">' + esc(t.status) + '</span>'
+      h += '<span class="task-pct">' + t.pct + '%</span></span></div>'
+      h += '<div class="task-bar"><i class="done" style="width:' + tDone + '%"></i>'
+      h += '<i class="doing" style="width:' + tDoing + '%"></i></div>'
+
+      h += '<div class="task-body">'
+      for (var n = 0; n < t.notes.length; n++) h += '<p class="note">' + rich(t.notes[n]) + '</p>'
+      for (var g = 0; g < t.groups.length; g++) {
+        if (t.groups[g].name) h += '<div class="group-name">' + esc(t.groups[g].name) + '</div>'
+        h += renderItems(t.groups[g].items)
+      }
+      var keys = Object.keys(t.meta).filter(function (k) { return k !== 'status' })
+      if (keys.length) {
+        h += '<div class="chips">'
+        for (var m = 0; m < keys.length; m++) {
+          h += '<span class="chip"><b>' + esc(keys[m]) + '</b> ' + rich(t.meta[keys[m]]) + '</span>'
+        }
+        h += '</div>'
+      }
+      h += '</div></section>'
+    }
+
+    if (!shown) h += '<div class="empty">Nothing matches this filter.</div>'
+
+    var when = d.generatedAt ? new Date(d.generatedAt).toLocaleTimeString() : ''
+    h += '<footer><span class="live" id="live"><i class="dot"></i><span id="live-label">live</span></span>'
+    h += '<span class="sep">·</span><span>built ' + esc(when) + '</span>'
+    h += '<span class="sep">·</span><span class="mono">' + esc(d.source || '') + '</span></footer>'
+
+    root.innerHTML = h
+    wire()
+  }
+
+  function wire() {
+    var seg = document.getElementById('seg')
+    if (seg) seg.addEventListener('click', function (e) {
+      var b = e.target.closest('button'); if (!b) return
+      filter = b.dataset.f; save('progress.filter', filter); render(window.__PROGRESS__)
+    })
+    document.querySelectorAll('.task-head').forEach(function (head) {
+      head.addEventListener('click', function () {
+        var sec = head.closest('.task')
+        var open = sec.dataset.open !== 'true'
+        sec.dataset.open = open
+        openState[sec.dataset.key] = open
+        save('progress.open', JSON.stringify(openState))
+      })
+    })
+    function setAll(open) {
+      document.querySelectorAll('.task').forEach(function (s) {
+        s.dataset.open = open; openState[s.dataset.key] = open
+      })
+      save('progress.open', JSON.stringify(openState))
+    }
+    var ex = document.getElementById('expand'), co = document.getElementById('collapse')
+    if (ex) ex.addEventListener('click', function () { setAll(true) })
+    if (co) co.addEventListener('click', function () { setAll(false) })
+  }
+
+  function setLive(on, label) {
+    var el = document.getElementById('live')
+    if (!el) return
+    el.className = 'live' + (on ? '' : ' off')
+    document.getElementById('live-label').textContent = label
+  }
+
+  function apply() {
+    var d = window.__PROGRESS__
+    if (!d) return
+    var changed = prevStamp !== null && prevStamp !== d.stamp
+    prevStamp = d.stamp
+    render(d)
+    if (changed) { root.classList.remove('flash'); void root.offsetWidth; root.classList.add('flash') }
+  }
+
+  // A classic <script> tag is the one way to re-read a local file from a
+  // file:// page -- fetch and modules are both blocked there. The same path
+  // works over http, so the page behaves identically either way.
+  function pull() {
+    var s = document.createElement('script')
+    s.src = 'progress-data.js?t=' + Date.now()
+    s.onload = function () { s.remove() }
+    s.onerror = function () { s.remove(); setLive(false, 'progress-data.js missing') }
+    document.head.appendChild(s)
+  }
+
+  window.__onProgress = apply
+
+  if (window.__PROGRESS__) apply()
+  else root.innerHTML = '<div class="empty"><strong>No data yet.</strong><br><br>' +
+    'Generate it next to this file:<br><br><code>node progress.mjs build PROGRESS.md</code></div>'
+
+  if (location.protocol === 'http:' || location.protocol === 'https:') {
+    try {
+      var es = new EventSource('events')
+      // 'page' means the viewer itself changed -- a data pull cannot show that.
+      es.onmessage = function (e) { e.data === 'page' ? location.reload() : pull() }
+      es.onopen = function () { setLive(true, 'live') }
+      es.onerror = function () { setLive(false, 'reconnecting…') }
+    } catch (e) { setInterval(pull, 2000) }
+  } else {
+    setInterval(pull, 2000)
+    setTimeout(function () { setLive(true, 'polling every 2s') }, 0)
+  }
+})()
+</script>
+</body>
+</html>
