@@ -148,6 +148,7 @@ dashboard updates even though the work happened somewhere else.
 | `progress.mjs build [board]` | regenerate `progress-data.js` from the board |
 | `progress.mjs watch [board]` | rebuild on save and push to the browser; `--open`, `--port` |
 | `progress.mjs where [board]` | print which board would be edited |
+| `progress.mjs static [board] [out]` | write one self-contained HTML file — no server, no sibling files |
 
 ## Headless surfaces
 
