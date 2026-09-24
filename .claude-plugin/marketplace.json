@@ -1,0 +1,20 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "claude-progress",
+  "description": "A progress board for a project that Claude keeps current, with a dashboard that updates while you watch",
+  "owner": {
+    "name": "Marlex Ladag"
+  },
+  "plugins": [
+    {
+      "name": "progress",
+      "description": "Keeps a markdown progress board for a project and renders it as a live HTML dashboard. Claude ticks the boxes as it finishes work; percentages are computed from the checkboxes, so they cannot drift from what is written down.",
+      "author": {
+        "name": "Marlex Ladag"
+      },
+      "source": "./plugins/progress",
+      "category": "productivity",
+      "homepage": "https://github.com/marlexladag/claude-progress"
+    }
+  ]
+}

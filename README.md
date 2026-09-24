@@ -11,18 +11,30 @@ work, and the page reflects it without a refresh.
 
 ## Install
 
-The repository *is* the skill, so clone it straight into your skills directory:
+This repository is a Claude Code marketplace containing one plugin. In Claude
+Code:
 
-```bash
-git clone https://github.com/marlexladag/claude-progress.git ~/.claude/skills/progress
+```
+/plugin marketplace add marlexladag/claude-progress
+/plugin install progress@claude-progress
 ```
 
-Restart Claude Code. That is the whole registration step — Claude Code scans
-`~/.claude/skills/` at startup and reads the `name` and `description` from the
-frontmatter of `SKILL.md`.
+<details>
+<summary>Or install it as a plain skill, without the plugin system</summary>
 
-To make it available to everyone working on one repository instead, clone it to
-`<repo>/.claude/skills/progress` and commit it.
+Copy the skill directory into wherever you keep skills:
+
+```bash
+git clone https://github.com/marlexladag/claude-progress.git /tmp/claude-progress
+cp -R /tmp/claude-progress/plugins/progress/skills/progress ~/.claude/skills/progress
+```
+
+Restart Claude Code. It scans `~/.claude/skills/` at startup and reads the
+`name` and `description` from the frontmatter of `SKILL.md` — that is the whole
+registration step. To give it to everyone working on one repository instead,
+copy it to `<repo>/.claude/skills/progress` and commit it.
+
+</details>
 
 Requires Node 18 or newer. Nothing else — no dependencies, no build step.
 
@@ -31,7 +43,7 @@ Requires Node 18 or newer. Nothing else — no dependencies, no build step.
 In any project, ask Claude to *"install a progress board here"*, or run:
 
 ```bash
-node ~/.claude/skills/progress/assets/progress.mjs install docs/progress
+node "${CLAUDE_PLUGIN_ROOT}/skills/progress/assets/progress.mjs" install docs/progress
 ```
 
 That writes `docs/progress/`, creates a starter `PROGRESS.md`, and prints how

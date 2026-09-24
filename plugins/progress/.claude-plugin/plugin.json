@@ -1,0 +1,9 @@
+{
+  "name": "progress",
+  "description": "Keeps a markdown progress board for a project and renders it as a live HTML dashboard that hot-reloads",
+  "author": {
+    "name": "Marlex Ladag"
+  },
+  "homepage": "https://github.com/marlexladag/claude-progress",
+  "license": "MIT"
+}

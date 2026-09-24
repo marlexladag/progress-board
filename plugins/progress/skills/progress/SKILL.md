@@ -1,6 +1,8 @@
 ---
 name: progress
 description: Keep and show a live progress board for a project — a percentage per task, checkboxes for the steps, and an HTML dashboard that hot-reloads. Use when the user asks where a project stands, what is done, what is left, for a status or progress report, or to set up / install / update a progress board. Also use after finishing a unit of work in a repo that has a board, to tick the box.
+version: 0.1.0
+license: MIT
 ---
 
 # Progress board
@@ -26,11 +28,19 @@ Before anything else, check whether the repo already has one:
 
 ## Installing into a repo
 
-One command, run from the repo root:
+One command, run from the repo root. The script sits in `assets/` beside this
+file, so use whichever path this skill was installed under:
 
 ```bash
+# installed as a plugin
+node "${CLAUDE_PLUGIN_ROOT}/skills/progress/assets/progress.mjs" install docs/progress
+
+# installed by hand into ~/.claude/skills/
 node ~/.claude/skills/progress/assets/progress.mjs install docs/progress
 ```
+
+After the first install the repo has its own `docs/progress/progress.mjs`, so
+every later command uses that copy and the skill's path stops mattering.
 
 It copies the viewer and this script in, writes the `.gitignore`, creates a
 `PROGRESS.md` from the template if there is not one already, builds, and prints
@@ -85,7 +95,7 @@ when the worktree is cleaned up.
 So before editing, ask where the board actually is:
 
 ```bash
-node ~/.claude/skills/progress/assets/progress.mjs where docs/progress/PROGRESS.md
+node docs/progress/progress.mjs where docs/progress/PROGRESS.md
 ```
 
 It prints the resolved path — falling back to the main working tree when the
