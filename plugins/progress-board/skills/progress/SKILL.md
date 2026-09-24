@@ -1,7 +1,7 @@
 ---
 name: progress
 description: Keep and show a live progress board for a project — a percentage per task, checkboxes for the steps, and an HTML dashboard that hot-reloads. Use when the user asks where a project stands, what is done, what is left, for a status or progress report, or to set up / install / update a progress board. Also use after finishing a unit of work in a repo that has a board, to tick the box.
-version: 0.1.0
+version: 0.1.1
 license: MIT
 ---
 
@@ -188,8 +188,24 @@ tasks that actually matter, not a recital of every step. `progress.mjs build`
 prints the headline (`64%  18/28 done`) — cheap to run and quote. If anything
 is `[>]`, say what is running.
 
-**A status question is a question, not a request to launch something.** Answer
-it in chat first. Then ask whether a dashboard is already up:
+**A status question is a question, not a request to launch something, and not
+a request to stop working.** If you are in the middle of a step, answer it and
+carry straight on with that step in the same turn — do not treat it as a new
+instruction, do not ask what to do next, and do not wait for a reply before
+resuming. Being asked where things stand is someone reading the dashboard over
+your shoulder; it is not a change of plan.
+
+In particular, while mid-step:
+
+- **Leave the `[>]` marker alone.** The step is still running, so the board
+  should still say so. Clearing it to answer a question makes the dashboard
+  claim the work stopped when it did not.
+- **Answer from the board as it stands.** Reconciling the whole board against
+  the repo is worth doing when you are between pieces of work, not in the
+  middle of one — it is slow and it buries the answer that was asked for.
+- **Do not re-plan.** Report the number, name what is running, and continue.
+
+Answer in chat first. Then ask whether a dashboard is already up:
 
 ```bash
 node docs/progress/progress.mjs serving docs/progress/PROGRESS.md
