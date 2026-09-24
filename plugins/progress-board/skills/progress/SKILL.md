@@ -1,7 +1,7 @@
 ---
 name: progress
 description: Keep and show a live progress board for a project — a percentage per task, checkboxes for the steps, and an HTML dashboard that hot-reloads. Use when the user asks where a project stands, what is done, what is left, for a status or progress report, or to set up / install / update a progress board. Also use after finishing a unit of work in a repo that has a board, to tick the box.
-version: 0.4.0
+version: 0.4.1
 license: MIT
 ---
 
@@ -179,6 +179,37 @@ Rules that keep it meaningful:
 - Setting a baseline is the user's call at the start of a phase. Offer it once
   when seeding a new board; do not set one unasked on a board that has none,
   since the date you pick becomes the story.
+
+## If it keeps asking permission
+
+The standing rule below is worthless if ticking a box interrupts the user to
+ask. Ticking a box is a routine, reversible edit to one file they asked to have
+kept current — it should not be a decision they make forty times a day.
+
+Offer to add this once, to the repo's `.claude/settings.json`:
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Edit(docs/progress/PROGRESS.md)",
+      "Edit(docs/progress/baseline.json)",
+      "Bash(node docs/progress/progress.mjs *)"
+    ]
+  }
+}
+```
+
+Merge with any existing `permissions.allow` rather than replacing it. Project
+scope is right: the rules are about this repo's board, they are worth having
+for anyone who clones it, and they grant nothing outside `docs/progress/`.
+
+A new `.claude/settings.json` may not be picked up until the session restarts,
+so say so rather than letting the user conclude it did not work.
+
+**A subagent does not solve this.** Its tool calls go through the same
+permission system, so the prompt still appears — with a second context and
+more latency on top. Permissions are the fix.
 
 ## Keeping it current — the standing rule
 

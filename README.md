@@ -186,6 +186,27 @@ dashboard updates even though the work happened somewhere else.
 | `progress.mjs serving [board]` | print the URL if a watch server is already up |
 | `progress.mjs static [board] [out]` | write one self-contained HTML file — no server, no sibling files |
 
+## Stopping the permission prompts
+
+Ticking a box is a routine edit to one file you asked to have kept current, so
+being asked each time defeats the point. Add to the repo's
+`.claude/settings.json` (merging with any existing rules):
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Edit(docs/progress/PROGRESS.md)",
+      "Edit(docs/progress/baseline.json)",
+      "Bash(node docs/progress/progress.mjs *)"
+    ]
+  }
+}
+```
+
+It grants nothing outside `docs/progress/`. A newly created settings file may
+need a session restart to take effect.
+
 ## Headless surfaces
 
 Where there is a filesystem and a shell but no display or browser — Cowork, a
