@@ -1,4 +1,4 @@
-# claude-progress
+# progress-board
 
 A [Claude Code](https://claude.com/claude-code) skill that keeps a progress
 board for a project and renders it as a dashboard that updates while you watch.
@@ -15,8 +15,8 @@ This repository is a Claude Code marketplace containing one plugin. In Claude
 Code:
 
 ```
-/plugin marketplace add marlexladag/claude-progress
-/plugin install progress-board@claude-progress
+/plugin marketplace add marlexladag/progress-board
+/plugin install progress-board@progress-board
 ```
 
 <details>
@@ -25,8 +25,8 @@ Code:
 Copy the skill directory into wherever you keep skills:
 
 ```bash
-git clone https://github.com/marlexladag/claude-progress.git /tmp/claude-progress
-cp -R /tmp/claude-progress/plugins/progress-board/skills/progress ~/.claude/skills/progress
+git clone https://github.com/marlexladag/progress-board.git /tmp/progress-board
+cp -R /tmp/progress-board/plugins/progress-board/skills/progress ~/.claude/skills/progress
 ```
 
 Restart Claude Code. It scans `~/.claude/skills/` at startup and reads the

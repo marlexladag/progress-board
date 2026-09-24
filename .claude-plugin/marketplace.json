@@ -1,6 +1,6 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "claude-progress",
+  "name": "progress-board",
   "description": "A progress board for a project that Claude keeps current, with a dashboard that updates while you watch",
   "owner": {
     "name": "Marlex Ladag"
@@ -14,7 +14,7 @@
       },
       "source": "./plugins/progress-board",
       "category": "productivity",
-      "homepage": "https://github.com/marlexladag/claude-progress"
+      "homepage": "https://github.com/marlexladag/progress-board"
     }
   ]
 }
