@@ -5,6 +5,7 @@
  *
  * No dependencies. Node 18+.
  *
+ *   node progress.mjs task  [board] [match]         ONE task (default: the [>] one)
  *   node progress.mjs where                          which board am I editing?
  *   node progress.mjs serving [board]               URL if a watch server is up
  *   node progress.mjs static [board] [out.html]     one self-contained file
@@ -260,6 +261,62 @@ function serving(boardPath) {
   return { pid: rec.pid, port: rec.port }
 }
 
+// One task, not the whole board. "Where are we in this task?" deserves that
+// task's number -- quoting the project total answers a question nobody asked.
+const GLYPH = { done: 'x', running: '>', doing: '~', todo: ' ', dropped: '-' }
+
+function printSteps(items, indent) {
+  for (const it of items) {
+    const g = GLYPH[it.state] ?? ' '
+    const date = it.date ? `  @${it.date}` : ''
+    const pct = it.children.length && it.pct !== null ? `  (${it.pct}%)` : ''
+    console.log(`${indent}[${g}] ${it.text}${pct}${date}`)
+    printSteps(it.children, indent + '    ')
+  }
+}
+
+function reportTask(doc, match) {
+  let task = null
+
+  if (match) {
+    const needle = match.toLowerCase()
+    const hits = doc.tasks.filter((t) => t.name.toLowerCase().includes(needle))
+    if (hits.length === 0) {
+      console.error(`No task matching ${JSON.stringify(match)}. The board has:`)
+      for (const t of doc.tasks) console.error(`  ${t.name}`)
+      process.exit(1)
+    }
+    if (hits.length > 1) {
+      console.error(`${JSON.stringify(match)} matches more than one task:`)
+      for (const t of hits) console.error(`  ${t.name}`)
+      process.exit(1)
+    }
+    task = hits[0]
+  } else {
+    // No name given: "this task" is the one being worked on.
+    task = doc.tasks.find((t) => t.running > 0)
+    if (!task) {
+      console.error('Nothing is marked [>], so there is no current task.')
+      console.error('Name one, or mark the step being worked on with [>].')
+      process.exit(1)
+    }
+  }
+
+  console.log(task.name)
+  console.log(`  ${task.pct}%  ${task.status}  ${task.done}/${task.total} done`)
+  // A declared status that `running` overrode would read as a contradiction.
+  if (task.meta.status && task.status === task.meta.status.toLowerCase()) {
+    console.log(`  declared: ${task.meta.status}`)
+  }
+  console.log('')
+  for (const g of task.groups) {
+    if (g.name) console.log(`  ${g.name}`)
+    printSteps(g.items, '  ')
+  }
+  console.log('')
+  console.log(`  (project: ${doc.pct}%  ${doc.totals.done}/${doc.total} done)`)
+}
+
 // ------------------------------------------------------------- resolving
 
 // An agent working in a git worktree has its own checkout, and the board is
@@ -482,6 +539,7 @@ const mode = verb === 'watch' ? 'watch'
   : verb === 'where' ? 'where'
   : verb === 'static' ? 'static'
   : verb === 'serving' ? 'serving'
+  : verb === 'task' ? 'task'
   : 'build'
 
 if (mode === 'install') {
@@ -511,6 +569,12 @@ if (mode === 'serving') {
   }
   console.log('not serving')
   process.exit(1)
+}
+
+if (mode === 'task') {
+  const { doc } = build(board)
+  reportTask(doc, positional[2])
+  process.exit(0)
 }
 
 if (mode === 'static') {

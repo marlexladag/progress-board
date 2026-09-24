@@ -1,7 +1,7 @@
 ---
 name: progress
 description: Keep and show a live progress board for a project — a percentage per task, checkboxes for the steps, and an HTML dashboard that hot-reloads. Use when the user asks where a project stands, what is done, what is left, for a status or progress report, or to set up / install / update a progress board. Also use after finishing a unit of work in a repo that has a board, to tick the box.
-version: 0.1.1
+version: 0.2.0
 license: MIT
 ---
 
@@ -183,10 +183,29 @@ and every edit to the board, since those need only Node, git and files.
 
 ## Reporting in chat — and when NOT to open a browser
 
-When asked where things stand, lead with the overall number and the one or two
-tasks that actually matter, not a recital of every step. `progress.mjs build`
-prints the headline (`64%  18/28 done`) — cheap to run and quote. If anything
-is `[>]`, say what is running.
+**First work out what was asked about: one task, or the project.** They are
+different questions and the second is not a safe default for the first.
+
+*"Where are we in this task?"*, *"how's the keyset work going?"*, or any
+question while a step is running — report that ONE task:
+
+```bash
+node docs/progress/progress.mjs task docs/progress/PROGRESS.md            # the [>] one
+node docs/progress/progress.mjs task docs/progress/PROGRESS.md "keyset"   # by name
+```
+
+It prints the task's own percentage, its steps with their marks, and the
+project total on one subordinate line. Lead with the task's number and its
+remaining steps. Do not recite the project — that line is context, not the
+answer. With no name it uses the task marked `[>]`; it exits non-zero and says
+so when nothing is running or a name matches nothing, or more than one thing,
+rather than guessing which task was meant.
+
+*"Where are we?"* with nothing to narrow it — report the PROJECT: lead with
+the overall number and the one or two tasks that actually matter, not a
+recital of every step. `progress.mjs build` prints that headline
+(`64%  18/28 done`) — cheap to run and quote. If anything is `[>]`, say what
+is running.
 
 **A status question is a question, not a request to launch something, and not
 a request to stop working.** If you are in the middle of a step, answer it and

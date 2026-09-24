@@ -123,7 +123,9 @@ same turn, without being asked. It is also told not to mark a step done until
 the work actually runs, and never to delete a step to improve a number — work
 that was genuinely cut is marked `[-]` instead.
 
-Ask *"where are we?"* and it reads the board, reconciles it against the
+Ask *"where are we in this task?"* and it answers about that one task — its
+percentage and its remaining steps — rather than the project total, which is a
+different question. With nothing to narrow it, ask *"where are we?"* and it reads the board, reconciles it against the
 repository if it looks stale, and answers with the number — in chat. If a
 dashboard is already running it includes the link; if not, it offers in one
 line rather than opening a browser tab you did not ask for. Say *"open the
@@ -150,6 +152,7 @@ dashboard updates even though the work happened somewhere else.
 | `progress.mjs install [dir]` | install into a repository (default `docs/progress`) |
 | `progress.mjs build [board]` | regenerate `progress-data.js` from the board |
 | `progress.mjs watch [board]` | rebuild on save and push to the browser; `--open`, `--port` |
+| `progress.mjs task [board] [match]` | report ONE task — the `[>]` one, or matched by name |
 | `progress.mjs where [board]` | print which board would be edited |
 | `progress.mjs serving [board]` | print the URL if a watch server is already up |
 | `progress.mjs static [board] [out]` | write one self-contained HTML file — no server, no sibling files |
