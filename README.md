@@ -267,6 +267,31 @@ animates the bars while your scroll position and collapsed sections survive, and
 a change to the viewer itself triggers a full reload, since new CSS cannot
 arrive through a data pull.
 
+## Releasing
+
+The version in `plugins/progress-board/.claude-plugin/plugin.json` is what
+gates updates — someone who installed an earlier version receives nothing until
+that field moves, however many commits land. So:
+
+```bash
+# 1. bump the version in plugin.json (and the skill's frontmatter, to match)
+# 2. check it the way the review pipeline does
+claude plugin validate ./plugins/progress-board --strict
+
+# 3. commit, then tag and push in one step
+claude plugin tag ./plugins/progress-board --push -m "progress-board %s"
+```
+
+`claude plugin tag` reads the version from `plugin.json`, **checks it agrees
+with the marketplace entry**, and creates `progress-board--v<version>` at HEAD.
+`--dry-run` prints what it would do without doing it.
+
+Tags before v0.5.1 were originally created by hand as plain `v<version>`; the
+conventional names were added afterwards at the same commits, and both sets are
+kept rather than rewriting published history. There is no 0.3.0 — the version
+was bumped to it and then bumped again before anything was committed, so the
+work it named shipped inside 0.4.0.
+
 ## Licence
 
 MIT.
