@@ -16,7 +16,7 @@ Code:
 
 ```
 /plugin marketplace add marlexladag/claude-progress
-/plugin install progress@claude-progress
+/plugin install progress-board@claude-progress
 ```
 
 <details>
@@ -26,7 +26,7 @@ Copy the skill directory into wherever you keep skills:
 
 ```bash
 git clone https://github.com/marlexladag/claude-progress.git /tmp/claude-progress
-cp -R /tmp/claude-progress/plugins/progress/skills/progress ~/.claude/skills/progress
+cp -R /tmp/claude-progress/plugins/progress-board/skills/progress ~/.claude/skills/progress
 ```
 
 Restart Claude Code. It scans `~/.claude/skills/` at startup and reads the

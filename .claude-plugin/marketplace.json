@@ -7,12 +7,12 @@
   },
   "plugins": [
     {
-      "name": "progress",
+      "name": "progress-board",
       "description": "Keeps a markdown progress board for a project and renders it as a live HTML dashboard. Claude ticks the boxes as it finishes work; percentages are computed from the checkboxes, so they cannot drift from what is written down.",
       "author": {
         "name": "Marlex Ladag"
       },
-      "source": "./plugins/progress",
+      "source": "./plugins/progress-board",
       "category": "productivity",
       "homepage": "https://github.com/marlexladag/claude-progress"
     }

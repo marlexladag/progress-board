@@ -1,5 +1,5 @@
 {
-  "name": "progress",
+  "name": "progress-board",
   "description": "Keeps a markdown progress board for a project and renders it as a live HTML dashboard that hot-reloads",
   "author": {
     "name": "Marlex Ladag"
