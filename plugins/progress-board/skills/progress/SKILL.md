@@ -160,6 +160,27 @@ Both hot-reload. The served one is instant over SSE; the file:// one lags up
 to two seconds and needs `build` to have run. Offer the watch command when the
 user will be watching while you work.
 
+## Where there is no browser
+
+Some surfaces have a filesystem and a shell but no display and no browser to
+open — Cowork among them. `watch` and `--open` are useless there: nothing can
+reach a localhost port, and `index.html` on its own is not enough because it
+reads `progress-data.js` from beside itself.
+
+Produce one self-contained file instead, and hand the user its path:
+
+```bash
+node docs/progress/progress.mjs static docs/progress/PROGRESS.md report.html
+```
+
+The data is inlined, so the file works alone, off any filesystem, with nothing
+beside it. It says "snapshot" in its footer rather than pretending to be live,
+because it cannot update itself — regenerate it after ticking boxes and tell
+the user it is refreshed.
+
+Everything else works unchanged on those surfaces: `install`, `build`, `where`,
+and every edit to the board, since those need only Node, git and files.
+
 ## Reporting in chat
 
 When asked where things stand, lead with the overall number and the one or two

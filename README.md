@@ -149,6 +149,23 @@ dashboard updates even though the work happened somewhere else.
 | `progress.mjs watch [board]` | rebuild on save and push to the browser; `--open`, `--port` |
 | `progress.mjs where [board]` | print which board would be edited |
 
+## Headless surfaces
+
+Where there is a filesystem and a shell but no display or browser — Cowork, a
+CI job, a remote box — `watch` and `--open` cannot help, and the viewer on its
+own is not enough because it reads its data from a file beside it. Produce a
+single self-contained file instead:
+
+```bash
+node docs/progress/progress.mjs static docs/progress/PROGRESS.md report.html
+```
+
+Everything is inlined, so it opens alone with nothing next to it, and its
+footer says "snapshot" rather than claiming to be live. The skill knows to
+reach for this when it cannot open a browser. `install`, `build`, `where` and
+every edit to the board need only Node, git and a filesystem, so they work
+on those surfaces unchanged.
+
 ## How the live reload works
 
 The viewer is a single HTML file with no build step, and it has to work both

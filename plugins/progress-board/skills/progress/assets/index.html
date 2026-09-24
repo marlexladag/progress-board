@@ -509,7 +509,11 @@
   else root.innerHTML = '<div class="empty"><strong>No data yet.</strong><br><br>' +
     'Generate it next to this file:<br><br><code>node progress.mjs build PROGRESS.md</code></div>'
 
-  if (location.protocol === 'http:' || location.protocol === 'https:') {
+  // A static snapshot carries its data inline and has no server behind it,
+  // so polling would only 404 and then claim the data is missing.
+  if (window.__STATIC__) {
+    setLive(false, 'snapshot — regenerate to update')
+  } else if (location.protocol === 'http:' || location.protocol === 'https:') {
     try {
       var es = new EventSource('events')
       // 'page' means the viewer itself changed -- a data pull cannot show that.

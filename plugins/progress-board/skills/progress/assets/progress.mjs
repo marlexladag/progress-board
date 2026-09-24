@@ -6,6 +6,8 @@
  * No dependencies. Node 18+.
  *
  *   node progress.mjs where                          which board am I editing?
+ *   node progress.mjs static [board] [out.html]     one self-contained file
+ *                                                   (headless: no server, no browser)
  *   node progress.mjs install [dir]                 (default docs/progress)
  *   node progress.mjs build   [board.md]
  *   node progress.mjs watch   [board.md] [--port 4321] [--open]
@@ -193,6 +195,36 @@ export function measure(doc) {
   doc.tasksDone = doc.tasks.filter((t) => t.status === 'done').length
   doc.taskCount = doc.tasks.length
   return doc
+}
+
+// One self-contained HTML file: the data inlined, nothing to fetch, nothing
+// to serve. This is the only form that works where there is no browser to
+// open and no port to listen on -- Cowork and other headless surfaces, where
+// the user is handed a file they open themselves.
+function buildStatic(boardPath, outPath) {
+  const { doc } = build(boardPath)
+  const viewer = join(dirname(boardPath), 'index.html')
+  if (!existsSync(viewer)) {
+    console.error(`No viewer at ${viewer}`)
+    process.exit(1)
+  }
+
+  const inline =
+    '<script>window.__STATIC__ = true; window.__PROGRESS__ = ' +
+    JSON.stringify(doc).replace(/<\//g, '<\\/') +
+    ';</script>'
+
+  const html = readFileSync(viewer, 'utf8')
+    .replace('<script src="progress-data.js"></script>', inline)
+
+  if (html.includes('progress-data.js"></script>')) {
+    console.error('Could not inline the data: the viewer has an unexpected shape.')
+    process.exit(1)
+  }
+
+  const out = resolve(outPath || join(dirname(boardPath), 'progress.html'))
+  writeFileSync(out, html)
+  return { doc, out }
 }
 
 // ------------------------------------------------------------- resolving
@@ -409,6 +441,7 @@ const verb = positional[0]
 const mode = verb === 'watch' ? 'watch'
   : verb === 'install' ? 'install'
   : verb === 'where' ? 'where'
+  : verb === 'static' ? 'static'
   : 'build'
 
 if (mode === 'install') {
@@ -430,7 +463,12 @@ if (!existsSync(board)) {
   process.exit(1)
 }
 
-if (mode === 'watch') {
+if (mode === 'static') {
+  const outArg = positional[2]
+  const { doc, out } = buildStatic(board, outArg)
+  const kb = Math.round(readFileSync(out).length / 1024)
+  console.log(`${doc.pct}%  ${doc.totals.done}/${doc.total} done  ->  ${out}  (${kb} kB, self-contained)`)
+} else if (mode === 'watch') {
   serve(board, port, flags.has('--open'))
 } else {
   const { doc, out } = build(board)
