@@ -76,7 +76,8 @@ owner: platform team
 An optional paragraph about this task.
 
 - [x] A finished step @2026-09-16
-- [~] A step in flight — counts half
+- [>] The step being worked on right now — counts half
+- [~] Underway, but not being touched this moment — counts half
 - [ ] A step not started
 - [-] A step that was cut — leaves the denominator entirely
 - [ ] A step with children
@@ -98,9 +99,15 @@ status: blocked
 
 ### How the numbers work
 
-Task percentage is weighted steps over countable steps: `[x]` counts 1, `[~]`
-counts a half, `[ ]` counts 0, and `[-]` leaves the denominator, so cutting
-scope does not quietly depress the number forever.
+Task percentage is weighted steps over countable steps: `[x]` counts 1, `[>]`
+and `[~]` count a half, `[ ]` counts 0, and `[-]` leaves the denominator, so
+cutting scope does not quietly depress the number forever.
+
+`[>]` is the live marker, and it is what separates *in progress* from *being
+worked on this moment*. Its task reports `running`, the dashboard shows it in a
+"Running now" banner with the path to the exact step, and its card is
+highlighted — useful precisely because every other card also says "in
+progress".
 
 Only leaf steps count. A parent with children takes its state from them, so a
 task cannot be reported complete by ticking a headline.

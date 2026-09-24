@@ -68,7 +68,8 @@ owner: whoever
 Optional paragraph shown under the task.
 
 - [x] A finished step @2026-01-15
-- [~] A step in flight (counts half)
+- [>] The step being worked on RIGHT NOW (counts half)
+- [~] A step in flight but not being worked this moment (counts half)
 - [ ] A step not started
 - [-] A dropped step (leaves the denominator)
   - [x] Indented steps are the ones that count; parents derive their state
@@ -80,6 +81,9 @@ Optional paragraph shown under the task.
   like `blocked` or `deferred`. Let `done`, `in progress` and `not started`
   compute themselves.
 - `@YYYY-MM-DD` at the end of a step is the day it finished.
+- `[>]` is the live marker. Its task reports `running`, it shows in the
+  dashboard's "Running now" banner, and its card is highlighted — which is the
+  whole point, since every other card also says "in progress".
 - Only leaf steps count. A parent with children completes when they all do.
 - Task % = weighted steps / countable steps. Overall % = the same sum across
   every task, so a big task moves the number more than a small one.
@@ -122,9 +126,16 @@ file:// case correct too, so just always run it.
 
 Other rules that keep the board trustworthy:
 
-- Mark a step `[~]` when you start it, `[x]` when it is actually finished —
-  tests passing, not "written". A board that reports work that does not run is
-  worse than no board.
+- **Mark a step `[>]` when you START it and clear it the moment you stop** —
+  to `[x]` when it is finished, or back to `[~]` if you are setting it down
+  unfinished. `[>]` means *a step is being worked on at this moment*, so a
+  stale one is a lie the dashboard tells in its most prominent place. Keep at
+  most one `[>]` on the board.
+- `[~]` is for a step that is genuinely underway but not being touched right
+  now. The difference matters: without it, every task reads "in progress" and
+  the board cannot say where the work actually is.
+- Mark `[x]` only when the work actually runs — tests passing, not "written".
+  A board that reports work that does not run is worse than no board.
 - New work that appears mid-task gets appended as new unchecked steps, even
   though it drops the percentage. Never delete a step to make a number look
   better; mark it `[-]` if it was genuinely cut, and say so.

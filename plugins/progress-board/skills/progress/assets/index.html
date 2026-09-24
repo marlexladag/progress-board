@@ -17,6 +17,7 @@
     --accent: #3068f0;
     --done: #16a05c;
     --doing: #cf8408;
+    --running: #2f6df6;
     --todo: #ccd3db;
     --dropped: #b4bac2;
     --track: #e9edf2;
@@ -28,7 +29,7 @@
     :root:not([data-theme="light"]) {
       --bg: #0d1014; --panel: #151920; --line: #242a33; --line-soft: #1d232b;
       --ink: #e8ecf1; --dim: #99a3b0; --faint: #6b7583; --accent: #6693ff;
-      --done: #2fbf76; --doing: #e0a02a; --todo: #363e49; --dropped: #434b56;
+      --done: #2fbf76; --doing: #e0a02a; --running: #5b8cff; --todo: #363e49; --dropped: #434b56;
       --track: #1f252d;
       --shadow: 0 1px 2px rgba(0,0,0,.3), 0 2px 10px rgba(0,0,0,.22);
       --hover: rgba(255,255,255,.03);
@@ -37,7 +38,7 @@
   :root[data-theme="dark"] {
     --bg: #0d1014; --panel: #151920; --line: #242a33; --line-soft: #1d232b;
     --ink: #e8ecf1; --dim: #99a3b0; --faint: #6b7583; --accent: #6693ff;
-    --done: #2fbf76; --doing: #e0a02a; --todo: #363e49; --dropped: #434b56;
+    --done: #2fbf76; --doing: #e0a02a; --running: #5b8cff; --todo: #363e49; --dropped: #434b56;
     --track: #1f252d;
     --shadow: 0 1px 2px rgba(0,0,0,.3), 0 2px 10px rgba(0,0,0,.22);
     --hover: rgba(255,255,255,.03);
@@ -78,6 +79,7 @@
   .ring circle { fill: none; stroke-linecap: round; }
   .ring .track { stroke: var(--track); }
   .ring .arc-doing { stroke: var(--doing); transition: stroke-dashoffset .5s cubic-bezier(.2,.7,.3,1); }
+  .ring .arc-running { stroke: var(--running); transition: stroke-dashoffset .5s cubic-bezier(.2,.7,.3,1); }
   .ring .arc-done { stroke: var(--done); transition: stroke-dashoffset .5s cubic-bezier(.2,.7,.3,1); }
   .ring-label {
     position: absolute; inset: 0; display: grid; place-items: center;
@@ -134,6 +136,42 @@
   .pill.in-progress, .pill.doing { color: var(--doing); border-color: color-mix(in srgb, var(--doing) 35%, transparent); background: color-mix(in srgb, var(--doing) 9%, transparent); }
   .pill.blocked { color: #e05252; border-color: color-mix(in srgb, #e05252 35%, transparent); background: color-mix(in srgb, #e05252 8%, transparent); }
   .pill.deferred { color: var(--faint); border-style: dashed; }
+  .pill.running {
+    color: #fff; background: var(--running); border-color: var(--running);
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .pill.running::before {
+    content: ""; width: 6px; height: 6px; border-radius: 99px;
+    background: #fff; animation: pulse 1.4s ease-in-out infinite;
+  }
+
+  /* The card being worked on right now gets an edge you can find while
+     scrolling, since every other card also says "in progress". */
+  .task[data-running="true"] {
+    border-color: color-mix(in srgb, var(--running) 45%, var(--line));
+    box-shadow: var(--shadow), 0 0 0 3px color-mix(in srgb, var(--running) 12%, transparent);
+  }
+
+  .runbanner {
+    display: flex; align-items: center; gap: 13px;
+    background: var(--panel);
+    border: 1px solid color-mix(in srgb, var(--running) 40%, var(--line));
+    border-left: 3px solid var(--running);
+    border-radius: 11px; box-shadow: var(--shadow);
+    padding: 13px 17px; margin-top: 12px;
+  }
+  .runbanner .beacon {
+    flex: none; width: 9px; height: 9px; border-radius: 99px;
+    background: var(--running); animation: pulse 1.4s ease-in-out infinite;
+  }
+  .runbanner .rb { min-width: 0; }
+  .rb-label {
+    font-size: 11px; text-transform: uppercase; letter-spacing: .07em;
+    color: var(--running); font-weight: 650;
+  }
+  .rb-line { font-size: 14.5px; margin-top: 1px; overflow-wrap: break-word; }
+  .rb-line .rb-task { color: var(--dim); }
+  .rb-line .rb-sep { color: var(--faint); margin: 0 6px; }
   .task-pct {
     font-variant-numeric: tabular-nums; font-weight: 560; font-size: 14px;
     width: 42px; text-align: right; white-space: nowrap;
@@ -142,6 +180,7 @@
   .task-bar > i { height: 100%; transition: width .45s cubic-bezier(.2,.7,.3,1); }
   .task-bar > i.done { background: var(--done); }
   .task-bar > i.doing { background: var(--doing); }
+  .task-bar > i.running { background: var(--running); }
 
   .task-body { padding: 2px 20px 18px; }
   .task[data-open="false"] .task-body, .task[data-open="false"] .task-bar { display: none; }
@@ -183,6 +222,11 @@
   .box.done { background: var(--done); border-color: var(--done); }
   .box.doing { border-color: var(--doing); background: color-mix(in srgb, var(--doing) 14%, transparent); }
   .box.doing i { width: 7px; height: 2px; border-radius: 2px; background: var(--doing); display: block; }
+  .box.running { border-color: var(--running); background: color-mix(in srgb, var(--running) 16%, transparent); }
+  .box.running i {
+    width: 7px; height: 7px; border-radius: 99px; background: var(--running);
+    display: block; animation: pulse 1.4s ease-in-out infinite;
+  }
   .box.dropped { border-color: var(--dropped); border-style: dashed; }
   .box.dropped i { width: 7px; height: 1.5px; border-radius: 2px; background: var(--dropped); display: block; }
   .item-text { min-width: 0; overflow-wrap: break-word; }
@@ -260,6 +304,7 @@
   function boxFor(state) {
     if (state === 'done') return '<span class="box done">' + CHECK + '</span>'
     if (state === 'doing') return '<span class="box doing"><i></i></span>'
+    if (state === 'running') return '<span class="box running"><i></i></span>'
     if (state === 'dropped') return '<span class="box dropped"><i></i></span>'
     return '<span class="box"></span>'
   }
@@ -291,16 +336,19 @@
     return true
   }
 
-  function ring(donePct, doingPct) {
+  function ring(donePct, runPct, doingPct) {
     var R = 44, C = 2 * Math.PI * R
-    var both = Math.min(100, donePct + doingPct)
+    var all = Math.min(100, donePct + runPct + doingPct)
+    var both = Math.min(100, donePct + runPct)
     return '<div class="ring"><svg width="104" height="104" viewBox="0 0 104 104">' +
       '<circle class="track" cx="52" cy="52" r="' + R + '" stroke-width="9"/>' +
       '<circle class="arc-doing" cx="52" cy="52" r="' + R + '" stroke-width="9" ' +
+        'stroke-dasharray="' + C + '" stroke-dashoffset="' + (C * (1 - all / 100)) + '"/>' +
+      '<circle class="arc-running" cx="52" cy="52" r="' + R + '" stroke-width="9" ' +
         'stroke-dasharray="' + C + '" stroke-dashoffset="' + (C * (1 - both / 100)) + '"/>' +
       '<circle class="arc-done" cx="52" cy="52" r="' + R + '" stroke-width="9" ' +
         'stroke-dasharray="' + C + '" stroke-dashoffset="' + (C * (1 - donePct / 100)) + '"/>' +
-      '</svg><div class="ring-label">' + Math.round(donePct + doingPct) + '%</div></div>'
+      '</svg><div class="ring-label">' + Math.round(all) + '%</div></div>'
   }
 
   function render(d) {
@@ -308,21 +356,38 @@
     document.title = d.title + ' — ' + d.pct + '%'
 
     var donePct = d.total ? (100 * d.totals.done) / d.total : 0
+    var runPct = d.total ? (100 * (d.totals.running || 0) * 0.5) / d.total : 0
     var doingPct = d.total ? (100 * d.totals.doing * 0.5) / d.total : 0
+    var running = d.running || []
 
     var h = '<header>'
     h += '<h1>' + esc(d.title) + '</h1>'
     if (d.subtitle) h += '<p class="subtitle">' + rich(d.subtitle) + '</p>'
 
-    h += '<div class="overall">' + ring(donePct, doingPct) + '<div class="overall-body">'
+    h += '<div class="overall">' + ring(donePct, runPct, doingPct) + '<div class="overall-body">'
     h += '<div class="overall-head">' + d.totals.done + ' of ' + d.total + ' steps done</div>'
     h += '<div class="overall-meta">' + d.tasksDone + ' of ' + d.taskCount + ' tasks complete</div>'
     h += '<div class="legend">'
     h += '<span><i class="dot" style="background:var(--done)"></i>' + d.totals.done + ' done</span>'
+    if (running.length) h += '<span><i class="dot" style="background:var(--running)"></i>' + running.length + ' running</span>'
     h += '<span><i class="dot" style="background:var(--doing)"></i>' + d.totals.doing + ' in progress</span>'
     h += '<span><i class="dot" style="background:var(--todo)"></i>' + d.totals.todo + ' to do</span>'
     if (d.totals.dropped) h += '<span><i class="dot" style="background:var(--dropped)"></i>' + d.totals.dropped + ' dropped</span>'
-    h += '</div></div></div></header>'
+    h += '</div></div></div>'
+
+    // Everything else on this page says "in progress". This says what is
+    // happening at this moment, and it is the first thing you should see.
+    if (running.length) {
+      h += '<div class="runbanner"><span class="beacon"></span><div class="rb">'
+      h += '<div class="rb-label">Running now</div>'
+      for (var r = 0; r < running.length; r++) {
+        var trail = (running[r].trail || []).concat([running[r].step])
+        h += '<div class="rb-line"><span class="rb-task">' + rich(running[r].task) + '</span>'
+        h += '<span class="rb-sep">\u203a</span>' + rich(trail.join(' \u203a ')) + '</div>'
+      }
+      h += '</div></div>'
+    }
+    h += '</header>'
 
     h += '<div class="controls"><div class="seg" id="seg">'
     var opts = [['all', 'All'], ['active', 'In progress'], ['todo', 'Not started'], ['done', 'Done']]
@@ -339,11 +404,14 @@
       if (!visible(t)) continue
       shown++
       var key = 'task' + i
-      var open = openState[key] !== undefined ? openState[key] : t.status !== 'done'
+      var open = t.status === 'running' ? true
+        : openState[key] !== undefined ? openState[key] : t.status !== 'done'
       var tDone = t.total ? (100 * t.done) / t.total : 0
+      var tRun = t.total ? (100 * (t.running || 0) * 0.5) / t.total : 0
       var tDoing = t.total ? (100 * t.doing * 0.5) / t.total : 0
 
-      h += '<section class="task" data-open="' + open + '" data-key="' + key + '">'
+      h += '<section class="task" data-open="' + open + '" data-key="' + key + '"'
+      h += ' data-running="' + (t.status === 'running') + '">'
       h += '<div class="task-head"><span class="chev">▼</span>'
       h += '<span class="task-name">' + rich(t.name) + '</span>'
       h += '<span class="task-count">' + t.done + '/' + t.total + '</span>'
@@ -351,6 +419,7 @@
       h += '<span class="pill ' + t.status.replace(/\s+/g, '-') + '">' + esc(t.status) + '</span>'
       h += '<span class="task-pct">' + t.pct + '%</span></span></div>'
       h += '<div class="task-bar"><i class="done" style="width:' + tDone + '%"></i>'
+      h += '<i class="running" style="width:' + tRun + '%"></i>'
       h += '<i class="doing" style="width:' + tDoing + '%"></i></div>'
 
       h += '<div class="task-body">'

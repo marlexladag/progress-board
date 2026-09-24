@@ -23,10 +23,15 @@ import { fileURLToPath } from 'node:url'
 const HERE = dirname(fileURLToPath(import.meta.url))
 
 // A checkbox mark and what it means. Anything unrecognised reads as todo.
-const MARKS = { ' ': 'todo', x: 'done', X: 'done', '~': 'doing', '/': 'doing', '-': 'dropped' }
+const MARKS = {
+  ' ': 'todo', x: 'done', X: 'done',
+  '~': 'doing', '/': 'doing',
+  '>': 'running',   // being worked on AT THIS MOMENT, not merely started
+  '-': 'dropped',
+}
 // What each state contributes to a percentage. `dropped` leaves the
 // denominator entirely -- work that was cut should not drag a number down.
-const WEIGHT = { done: 1, doing: 0.5, todo: 0, dropped: null }
+const WEIGHT = { done: 1, doing: 0.5, running: 0.5, todo: 0, dropped: null }
 
 // ---------------------------------------------------------------- parsing
 
@@ -112,7 +117,10 @@ function rollup(item) {
     let sum = 0, n = 0
     for (const c of item.children) { const r = rollup(c); sum += r.sum; n += r.n }
     item.pct = n ? Math.round((100 * sum) / n) : null
-    item.state = n ? (sum === n ? 'done' : sum > 0 ? 'doing' : 'todo') : item.state
+    const anyRunning = item.children.some((c) => c.state === 'running')
+    item.state = anyRunning ? 'running'
+      : n ? (sum === n ? 'done' : sum > 0 ? 'doing' : 'todo')
+      : item.state
     return { sum, n }
   }
   item.pct = null
@@ -127,6 +135,9 @@ function countLeaves(item, acc) {
 }
 
 function statusOf(task) {
+  // Running beats an explicit status: what is happening now is the most
+  // useful thing a collapsed row can say.
+  if (task.running > 0) return 'running'
   if (task.meta.status) return task.meta.status.toLowerCase()
   if (task.total === 0) return 'planned'
   if (task.pct >= 100) return 'done'
@@ -136,11 +147,11 @@ function statusOf(task) {
 
 export function measure(doc) {
   let sum = 0, n = 0
-  const totals = { done: 0, doing: 0, todo: 0, dropped: 0 }
+  const totals = { done: 0, doing: 0, running: 0, todo: 0, dropped: 0 }
 
   for (const task of doc.tasks) {
     let ts = 0, tn = 0
-    const counts = { done: 0, doing: 0, todo: 0, dropped: 0 }
+    const counts = { done: 0, doing: 0, running: 0, todo: 0, dropped: 0 }
     for (const g of task.groups) {
       for (const item of g.items) {
         const r = rollup(item)
@@ -150,6 +161,7 @@ export function measure(doc) {
     }
     task.done = counts.done
     task.doing = counts.doing
+    task.running = counts.running
     task.todo = counts.todo
     task.dropped = counts.dropped
     task.total = tn
@@ -157,6 +169,22 @@ export function measure(doc) {
     task.status = statusOf(task)
     sum += ts; n += tn
     for (const k of Object.keys(totals)) totals[k] += counts[k]
+  }
+
+  // A flat list of what is running right now, for the banner.
+  doc.running = []
+  for (const task of doc.tasks) {
+    for (const g of task.groups) {
+      const walk = (items, trail) => {
+        for (const it of items) {
+          if (!it.children.length && it.state === 'running') {
+            doc.running.push({ task: task.name, step: it.text, trail })
+          }
+          walk(it.children, it.children.length ? [...trail, it.text] : trail)
+        }
+      }
+      walk(g.items, [])
+    }
   }
 
   doc.totals = totals
