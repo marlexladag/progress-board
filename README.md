@@ -11,13 +11,38 @@ work, and the page reflects it without a refresh.
 
 ## Install
 
-This repository is a Claude Code marketplace containing one plugin. In Claude
-Code:
+This repository is a Claude Code marketplace containing one plugin. Install it
+from inside Claude Code, or from a terminal — the two are equivalent.
+
+**Inside Claude Code**, at the prompt (these are slash commands, not shell):
 
 ```
 /plugin marketplace add marlexladag/progress-board
 /plugin install progress-board@progress-board
 ```
+
+**From a terminal**, which also works before you have started Claude Code and
+in a setup script:
+
+```bash
+claude plugin marketplace add marlexladag/progress-board
+claude plugin install progress-board@progress-board
+```
+
+Then restart Claude Code, or run `/reload-plugins` in a running session.
+Confirm it took with `claude plugin list`.
+
+`install` takes `--scope user` (the default, every project), `project` (written
+to the repository's settings, so everyone who clones it gets the plugin) or
+`local` (this repository, just you):
+
+```bash
+claude plugin install progress-board@progress-board --scope project
+```
+
+Useful afterwards: `claude plugin list`, `claude plugin details progress-board`,
+`claude plugin disable progress-board`, and `claude plugin marketplace update
+progress-board` to pull a newer version.
 
 <details>
 <summary>Or install it as a plain skill, without the plugin system</summary>

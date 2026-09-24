@@ -1,7 +1,7 @@
 ---
 name: progress
 description: Keep and show a live progress board for a project — a percentage per task, checkboxes for the steps, and an HTML dashboard that hot-reloads. Use when the user asks where a project stands, what is done, what is left, for a status or progress report, or to set up / install / update a progress board. Also use after finishing a unit of work in a repo that has a board, to tick the box.
-version: 0.5.0
+version: 0.5.1
 license: MIT
 ---
 
