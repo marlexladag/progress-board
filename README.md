@@ -124,7 +124,10 @@ the work actually runs, and never to delete a step to improve a number — work
 that was genuinely cut is marked `[-]` instead.
 
 Ask *"where are we?"* and it reads the board, reconciles it against the
-repository if it looks stale, and answers with the number.
+repository if it looks stale, and answers with the number — in chat. If a
+dashboard is already running it includes the link; if not, it offers in one
+line rather than opening a browser tab you did not ask for. Say *"open the
+board"* and it opens immediately.
 
 ### Worktrees
 
@@ -148,6 +151,7 @@ dashboard updates even though the work happened somewhere else.
 | `progress.mjs build [board]` | regenerate `progress-data.js` from the board |
 | `progress.mjs watch [board]` | rebuild on save and push to the browser; `--open`, `--port` |
 | `progress.mjs where [board]` | print which board would be edited |
+| `progress.mjs serving [board]` | print the URL if a watch server is already up |
 | `progress.mjs static [board] [out]` | write one self-contained HTML file — no server, no sibling files |
 
 ## Headless surfaces

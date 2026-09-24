@@ -181,9 +181,36 @@ the user it is refreshed.
 Everything else works unchanged on those surfaces: `install`, `build`, `where`,
 and every edit to the board, since those need only Node, git and files.
 
-## Reporting in chat
+## Reporting in chat — and when NOT to open a browser
 
 When asked where things stand, lead with the overall number and the one or two
 tasks that actually matter, not a recital of every step. `progress.mjs build`
-prints the headline (`64%  18/28 done`) — cheap to run and quote. Link the
-board as `docs/progress/PROGRESS.md` and mention the dashboard once.
+prints the headline (`64%  18/28 done`) — cheap to run and quote. If anything
+is `[>]`, say what is running.
+
+**A status question is a question, not a request to launch something.** Answer
+it in chat first. Then ask whether a dashboard is already up:
+
+```bash
+node docs/progress/progress.mjs serving docs/progress/PROGRESS.md
+```
+
+- **Exit 0** — it prints the URL. Include that URL in the answer as a link.
+  The page is already live and already showing the numbers just quoted, so
+  there is nothing to start and nothing to ask.
+- **Exit 1** — nothing is running. End with a single line offering to open it,
+  and stop there. Do not start a server and do not open a browser on the
+  strength of a status question; a tab that appears uninvited on the third
+  "where are we?" is worse than one line of text.
+
+**When the user actually asks to open it** — "open the board", "show me the
+dashboard", "put it on screen" — start it immediately and do not ask:
+
+```bash
+node docs/progress/progress.mjs watch docs/progress/PROGRESS.md --open
+```
+
+On a surface with no browser, hand over a `static` file instead of offering
+to open anything.
+
+Link the board as `docs/progress/PROGRESS.md` and mention the dashboard once.

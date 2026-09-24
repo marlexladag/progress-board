@@ -6,6 +6,7 @@
  * No dependencies. Node 18+.
  *
  *   node progress.mjs where                          which board am I editing?
+ *   node progress.mjs serving [board]               URL if a watch server is up
  *   node progress.mjs static [board] [out.html]     one self-contained file
  *                                                   (headless: no server, no browser)
  *   node progress.mjs install [dir]                 (default docs/progress)
@@ -13,7 +14,7 @@
  *   node progress.mjs watch   [board.md] [--port 4321] [--open]
  */
 import {
-  readFileSync, writeFileSync, existsSync, mkdirSync, copyFileSync,
+  readFileSync, writeFileSync, existsSync, mkdirSync, copyFileSync, unlinkSync,
   watch as fsWatch,
 } from 'node:fs'
 import { createServer } from 'node:http'
@@ -227,6 +228,38 @@ function buildStatic(boardPath, outPath) {
   return { doc, out }
 }
 
+// Is a watch server already up for THIS board? Reading another process's
+// command line cannot answer that: the path in it is relative to the server's
+// working directory, not ours, so a server for a different board resolves to
+// a false match. The server drops a file beside the board instead, which is
+// scoped to the board by construction.
+const SERVING = (boardPath) => join(dirname(boardPath), '.serving')
+
+function markServing(boardPath, port) {
+  const f = SERVING(boardPath)
+  writeFileSync(f, JSON.stringify({ pid: process.pid, port }) + '\n')
+  const clear = () => { try { unlinkSync(f) } catch {} }
+  process.on('exit', clear)
+  for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
+    process.on(sig, () => { clear(); process.exit(0) })
+  }
+}
+
+function serving(boardPath) {
+  const f = SERVING(boardPath)
+  if (!existsSync(f)) return null
+  let rec
+  try { rec = JSON.parse(readFileSync(f, 'utf8')) } catch { return null }
+
+  // A hard kill leaves the file behind; a dead pid means it is stale.
+  try {
+    process.kill(rec.pid, 0)
+  } catch (err) {
+    if (err.code === 'ESRCH') { try { unlinkSync(f) } catch {} ; return null }
+  }
+  return { pid: rec.pid, port: rec.port }
+}
+
 // ------------------------------------------------------------- resolving
 
 // An agent working in a git worktree has its own checkout, and the board is
@@ -322,6 +355,7 @@ function serve(boardPath, port, openIt) {
   server.listen(port, () => {
     const { doc } = build(boardPath)
     const url = `http://localhost:${port}/`
+    markServing(boardPath, port)
     console.log(`progress  ${doc.pct}%  ${doc.totals.done}/${doc.total} done  ->  ${url}`)
     console.log(`watching  ${boardPath}`)
     if (openIt) {
@@ -340,7 +374,7 @@ function serve(boardPath, port, openIt) {
   let pendingPage = false
 
   fsWatch(root, (_evt, filename) => {
-    if (filename === 'progress-data.js') return
+    if (filename === 'progress-data.js' || filename === '.serving') return
     if (filename && filename !== boardName && filename !== 'index.html') return
     if (filename === 'index.html') pendingPage = true
 
@@ -406,8 +440,13 @@ function install(target) {
     copied.push(f)
   }
 
+  // Both are runtime artefacts of this directory, never content.
   const gitignore = join(dest, '.gitignore')
-  if (!existsSync(gitignore)) writeFileSync(gitignore, 'progress-data.js\n')
+  const want = ['progress-data.js', '.serving']
+  const have = existsSync(gitignore) ? readFileSync(gitignore, 'utf8').split(/\r?\n/) : []
+  const merged = have.filter(Boolean)
+  for (const w of want) if (!merged.includes(w)) merged.push(w)
+  writeFileSync(gitignore, merged.join('\n') + '\n')
 
   const board = join(dest, 'PROGRESS.md')
   const fresh = !existsSync(board)
@@ -442,6 +481,7 @@ const mode = verb === 'watch' ? 'watch'
   : verb === 'install' ? 'install'
   : verb === 'where' ? 'where'
   : verb === 'static' ? 'static'
+  : verb === 'serving' ? 'serving'
   : 'build'
 
 if (mode === 'install') {
@@ -460,6 +500,16 @@ if (mode === 'where') {
 if (!existsSync(board)) {
   console.error(`No board at ${board}`)
   console.error('Create one with:  node progress.mjs install docs/progress')
+  process.exit(1)
+}
+
+if (mode === 'serving') {
+  const s = serving(board)
+  if (s) {
+    console.log(`http://localhost:${s.port}/`)
+    process.exit(0)
+  }
+  console.log('not serving')
   process.exit(1)
 }
 
